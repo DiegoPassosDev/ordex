@@ -64,6 +64,7 @@ export class StockService {
     quantity: number;
     costPerUnit: number;
     note?: string;
+    groupId?: string;
   }) {
     const totalCost = data.quantity * data.costPerUnit;
 
@@ -73,22 +74,139 @@ export class StockService {
         where: { id: data.stockItemId },
         data: {
           quantity: { increment: data.quantity },
-          costPerUnit: data.costPerUnit, // atualiza custo unitário com o mais recente
+          costPerUnit: data.costPerUnit,
         },
       }),
     ]);
     return entry;
   }
 
+  async createEntryGroup(data: {
+    restaurantId: string;
+    supplierId?: string;
+    note?: string;
+    items: { stockItemId: string; quantity: number; costPerUnit: number }[];
+  }) {
+    const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const entries = await Promise.all(
+      data.items.map((item) =>
+        this.createEntry({
+          ...item,
+          restaurantId: data.restaurantId,
+          supplierId: data.supplierId,
+          note: data.note,
+          groupId,
+        }),
+      ),
+    );
+
+    return {
+      groupId,
+      entries,
+      totalCost: entries.reduce((acc, e: any) => acc + e.totalCost, 0),
+    };
+  }
+
   async findEntries(restaurantId: string) {
-    return this.prisma.stockEntry.findMany({
+    const entries = await this.prisma.stockEntry.findMany({
       where: { restaurantId },
       orderBy: { createdAt: 'desc' },
-      take: 50,
       include: { stockItem: true, supplier: true },
+    });
+
+    // Agrupa por groupId
+    const groups: Record<string, any> = {};
+    const ungrouped: any[] = [];
+
+    entries.forEach((entry: any) => {
+      if (entry.groupId) {
+        if (!groups[entry.groupId]) {
+          groups[entry.groupId] = {
+            groupId: entry.groupId,
+            supplierId: entry.supplierId,
+            supplier: entry.supplier,
+            note: entry.note,
+            createdAt: entry.createdAt,
+            restaurantId: entry.restaurantId,
+            items: [],
+            totalCost: 0,
+          };
+        }
+        groups[entry.groupId].items.push(entry);
+        groups[entry.groupId].totalCost += entry.totalCost;
+      } else {
+        ungrouped.push({
+          groupId: entry.id,
+          supplier: entry.supplier,
+          note: entry.note,
+          createdAt: entry.createdAt,
+          items: [entry],
+          totalCost: entry.totalCost,
+        });
+      }
+    });
+
+    return [...Object.values(groups), ...ungrouped].sort(
+      (a: any, b: any) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }
+
+  async updateEntry(
+    id: string,
+    data: {
+      stockItemId?: string;
+      supplierId?: string;
+      quantity?: number;
+      costPerUnit?: number;
+      note?: string;
+    },
+  ) {
+    const entry = await this.prisma.stockEntry.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException('Entrada não encontrada.');
+
+    const quantity = data.quantity ?? entry.quantity;
+    const costPerUnit = data.costPerUnit ?? entry.costPerUnit;
+    const totalCost = quantity * costPerUnit;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Reverte a quantidade anterior no item de estoque
+      await tx.stockItem.update({
+        where: { id: entry.stockItemId },
+        data: { quantity: { decrement: entry.quantity } },
+      });
+
+      // Aplica a nova quantidade
+      await tx.stockItem.update({
+        where: { id: data.stockItemId ?? entry.stockItemId },
+        data: {
+          quantity: { increment: quantity },
+          costPerUnit: costPerUnit,
+        },
+      });
+
+      return tx.stockEntry.update({
+        where: { id },
+        data: { ...data, totalCost } as any,
+      });
     });
   }
 
+  async removeEntry(id: string) {
+    const entry = await this.prisma.stockEntry.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException('Entrada não encontrada.');
+
+    return this.prisma.$transaction(async (tx) => {
+      // Reverte a quantidade no estoque antes de deletar
+      await tx.stockItem.update({
+        where: { id: entry.stockItemId },
+        data: { quantity: { decrement: entry.quantity } },
+      });
+
+      return tx.stockEntry.delete({ where: { id } });
+    });
+  }
   // ── Saídas manuais ──
   async createExit(data: {
     stockItemId: string;

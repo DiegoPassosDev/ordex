@@ -42,12 +42,26 @@ export class StockController {
   // Entradas
   @Post('entries')
   createEntry(@Body() body: any) {
+    // Se vier array de items, usa createEntryGroup
+    if (body.items && Array.isArray(body.items)) {
+      return this.service.createEntryGroup(body);
+    }
     return this.service.createEntry(body);
   }
 
   @Get('entries/restaurant/:restaurantId')
   findEntries(@Param('restaurantId') restaurantId: string) {
     return this.service.findEntries(restaurantId);
+  }
+
+  @Patch('entries/:id')
+  updateEntry(@Param('id') id: string, @Body() body: any) {
+    return this.service.updateEntry(id, body);
+  }
+
+  @Delete('entries/:id')
+  removeEntry(@Param('id') id: string) {
+    return this.service.removeEntry(id);
   }
 
   // Saídas

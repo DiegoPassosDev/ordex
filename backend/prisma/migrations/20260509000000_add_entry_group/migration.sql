@@ -1,0 +1,1 @@
+ALTER TABLE "StockEntry" ADD COLUMN IF NOT EXISTS "groupId" TEXT;
