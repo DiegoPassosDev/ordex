@@ -164,7 +164,7 @@ export default function PurchasesPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={managerNavItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
@@ -350,7 +350,7 @@ export default function PurchasesPage() {
                     onChange={(e) =>
                       setForm({ ...form, supplierId: e.target.value })
                     }
-                    className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
+                    className="w-full px-4 py-3 h-[49px] rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
                   >
                     <option value="">Selecione...</option>
                     {suppliers.map((s) => (
@@ -391,7 +391,7 @@ export default function PurchasesPage() {
                           onChange={(e) =>
                             updateItem(i, "stockItemId", e.target.value)
                           }
-                          className="w-full px-3 py-2.5 rounded-xl bg-gray-700 border border-gray-600 text-white text-xs focus:outline-none focus:border-orange-500"
+                          className="w-full px-3 py-2.5 h-[42px] rounded-xl bg-gray-700 border border-gray-600 text-white text-xs focus:outline-none focus:border-orange-500"
                         >
                           <option value="">Insumo...</option>
                           {stockItems.map((s) => (
@@ -468,7 +468,7 @@ export default function PurchasesPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-4 pt-4 border-t border-gray-700">
+            <div className="flex justify-center gap-3 mt-4 pt-4 border-t border-gray-700">
               <Button
                 variant="secondary"
                 className="flex-1 bg-gray-700 border-gray-600 text-gray-300"

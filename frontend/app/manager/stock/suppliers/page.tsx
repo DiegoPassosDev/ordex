@@ -113,7 +113,7 @@ export default function SuppliersPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={managerNavItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
@@ -325,7 +325,7 @@ export default function SuppliersPage() {
                   className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
                 />
               </div>
-              <div className="flex gap-3 mt-2">
+              <div className="flex justify-center gap-3 mt-2">
                 <Button
                   variant="secondary"
                   className="flex-1 bg-gray-700 border-gray-600 text-gray-300"

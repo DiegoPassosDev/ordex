@@ -49,7 +49,7 @@ export default function StockReportsPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={managerNavItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
