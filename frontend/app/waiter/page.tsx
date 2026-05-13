@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { TableSession } from "@/types";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type Tab = "tables" | "alerts";
@@ -188,7 +188,7 @@ export default function WaiterPage() {
 
     return (
       <div className="min-h-screen bg-gray-900 w-full max-w-md mx-auto">
-        <Toaster position="top-center" />
+        <CustomToaster />
         <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40 px-4 py-4">
           <div className="flex items-center gap-3">
             <button
@@ -334,7 +334,7 @@ export default function WaiterPage() {
   /* ── Tela principal ── */
   return (
     <div className="min-h-screen bg-gray-900 w-full max-w-md mx-auto">
-      <Toaster position="top-center" />
+      <CustomToaster />
       <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40 px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

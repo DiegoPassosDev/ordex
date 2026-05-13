@@ -29,7 +29,7 @@ import {
   Download,
 } from "lucide-react";
 import { TableSession } from "@/types";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
@@ -200,7 +200,7 @@ export default function TablesPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-center" />
+      <CustomToaster />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">

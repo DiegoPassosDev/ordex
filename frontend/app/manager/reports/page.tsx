@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Order } from "@/types";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const navItems = [
@@ -99,7 +99,7 @@ export default function ReportsPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-center" />
+      <CustomToaster />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
