@@ -9,7 +9,7 @@ import { managerNavItems } from "@/lib/stock-nav";
 import { Bell, LogOut, Loader2, ArrowLeft, TrendingUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export default function StockReportsPage() {
@@ -49,7 +49,7 @@ export default function StockReportsPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-center" />
+      <CustomToaster />
       <Sidebar items={managerNavItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">

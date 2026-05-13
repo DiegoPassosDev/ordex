@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const UNITS = ["G", "KG", "ML", "L", "UN"];
@@ -138,7 +138,7 @@ export default function RecipesPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-center" />
+      <CustomToaster />
       <Sidebar items={managerNavItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
