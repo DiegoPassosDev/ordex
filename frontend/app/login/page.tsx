@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/auth.service";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/Button";
 import {
   LogIn,
   ChefHat,
@@ -13,7 +12,8 @@ import {
   ClipboardList,
   Users,
 } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,10 +22,18 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"guest" | "employee">("guest");
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   }
 
   async function handleSubmit() {
@@ -33,12 +41,14 @@ export default function LoginPage() {
       toast.error("Preencha todos os campos.");
       return;
     }
+
     if (mode === "guest" && isRegister && !form.name) {
       toast.error("Informe seu nome.");
       return;
     }
 
     setLoading(true);
+
     try {
       if (mode === "guest") {
         let token = "";
@@ -51,15 +61,18 @@ export default function LoginPage() {
             form.email,
             form.password,
           );
+
           token = data.accessToken;
           const payload = JSON.parse(atob(token.split(".")[1]));
           guestId = payload.sub;
           guestName = form.name;
         } else {
           const data = await authService.login(form.email, form.password);
+
           token = data.accessToken;
           const payload = JSON.parse(atob(token.split(".")[1]));
           guestId = payload.sub;
+
           try {
             const guestData = await api.get(`/guests/${guestId}`, {
               headers: { Authorization: `Bearer ${token}` },
@@ -99,17 +112,32 @@ export default function LoginPage() {
     }
   }
 
+  const inputClass =
+    "w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition";
+
   return (
     <div className="h-screen flex overflow-hidden">
-      <Toaster position="top-center" />
+      <CustomToaster />
 
-      {/* ── Lado Esquerdo ── */}
-      <div className="hidden lg:flex lg:w-3/5 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden flex-col p-16 h-full min-h-screen">
-        <div className="absolute top-[-80px] left-[-80px] w-80 h-80 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 rounded-full bg-white/5" />
+      <div className="fixed top-6 right-6 z-50">
+        <ThemeToggle />
+      </div>
+
+      {/* ── Lado Esquerdo ──  */}
+      <div
+        className="hidden lg:flex lg:w-3/5 relative overflow-hidden flex-col p-16 h-full min-h-screen"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--grad-end) 0%, var(--grad-mid) 50%, var(--grad-start) 100%)",
+        }}
+      >
+        {/* Círculos decorativos de fundo */}
+        <div className="absolute top-[-80px] left-[-80px] w-80 h-80 rounded-full bg-gray-400/20" />
+        <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 rounded-full bg-gray-400/20" />
         <div className="absolute top-1/2 right-[-40px] w-40 h-40 rounded-full bg-orange-500/10" />
 
         <div className="relative z-10 flex flex-col justify-center flex-1 h-full">
+          {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
             <div className="w-14 h-14 rounded-2xl bg-orange-500/20 border border-orange-500/30 backdrop-blur flex items-center justify-center">
               <ChefHat className="w-7 h-7 text-orange-400" />
@@ -119,17 +147,20 @@ export default function LoginPage() {
             </span>
           </div>
 
+          {/* Headline */}
           <h1 className="text-6xl font-bold text-white leading-tight">
             Gestão de
           </h1>
-          <h1 className="text-6xl font-bold text-white/40 leading-tight mb-6">
+          <h1 className="text-6xl font-bold text-gray-400 leading-tight mb-6">
             Restaurantes
           </h1>
+
           <p className="text-gray-400 text-lg leading-relaxed max-w-md">
             Gerencie pedidos, mesas e equipes com agilidade e sincronização em
             tempo real.
           </p>
 
+          {/* Feature badges */}
           <div className="flex flex-wrap gap-3 mt-10">
             {[
               { icon: UtensilsCrossed, label: "Pedidos" },
@@ -138,7 +169,7 @@ export default function LoginPage() {
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-700/60 border border-gray-600 text-gray-300 text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-700 border border-gray-600 text-gray-300 text-sm font-medium"
               >
                 <Icon className="w-4 h-4" />
                 {label}
@@ -148,17 +179,18 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── Lado Direito ── */}
-      <div className="w-full lg:w-2/5 bg-gray-900 flex items-center justify-center p-8">
+      {/* ── Lado Direito ──  */}
+      <div className="w-full lg:w-2/5 bg-gray-800 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            {/* Logo mobile — só aparece em telas pequenas */}
+            {/* Logo mobile (só aparece em telas pequenas) */}
             <div className="flex items-center gap-2 mb-6 lg:hidden">
               <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
                 <ChefHat className="w-5 h-5 text-orange-400" />
               </div>
               <span className="text-white text-xl font-bold">Ordex</span>
             </div>
+
             <h2 className="text-2xl font-bold text-white">
               Bem-vindo de volta
             </h2>
@@ -167,7 +199,9 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Toggle modo */}
+          {/* Toggle Cliente / Funcionário
+               `bg-gray-700` como fundo do container e `bg-gray-600` no botão
+               ativo — ambos já mapeados no globals.css para os dois temas.    */}
           <div className="flex rounded-xl bg-gray-700 p-1 mb-6">
             <button
               type="button"
@@ -206,7 +240,7 @@ export default function LoginPage() {
                   value={form.name}
                   onChange={handleChange}
                   autoComplete="name"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition"
+                  className={inputClass}
                 />
               </div>
             )}
@@ -223,7 +257,7 @@ export default function LoginPage() {
                 placeholder="Digite seu e-mail"
                 value={form.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition"
+                className={inputClass}
               />
             </div>
 
@@ -239,7 +273,7 @@ export default function LoginPage() {
                 value={form.password}
                 onChange={handleChange}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                className="w-full px-4 py-3 rounded-xl border border-gray-600 bg-gray-800 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition"
+                className={inputClass}
               />
             </div>
 
@@ -271,7 +305,7 @@ export default function LoginPage() {
             </p>
           )}
 
-          <p className="text-center text-xs text-gray-600 mt-8">
+          <p className="text-center text-xs text-gray-500 mt-8">
             Suporte: contato@ordex.com.br
           </p>
         </div>
