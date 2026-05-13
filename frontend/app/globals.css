@@ -6,9 +6,29 @@
   box-sizing: border-box;
 }
 
+/* ── Variáveis de fundo/texto global ─────────────────────────────────────────
+   Usadas pelo body. As classes de componente são controladas abaixo.          */
 :root {
-  --background: #ffffff;
+  --background: #e3e8ee;
   --foreground: #171717;
+}
+
+.theme-dark {
+  --background: #111827;
+  --foreground: #f9fafb;
+  /* gradiente do painel esquerdo */
+  --grad-start: #111827; /* bg-gray-900 */
+  --grad-mid: #1f2937; /* bg-gray-800 */
+  --grad-end: #030712; /* bg-gray-950 */
+}
+
+.theme-light {
+  --background: #e3e8ee;
+  --foreground: #111827;
+  /* gradiente do painel esquerdo */
+  --grad-start: #e3e8ee; /* bg-gray-900 light */
+  --grad-mid: #efd4bd; /* bg-gray-800 light */
+  --grad-end: #cbd5e1; /* bg-gray-950 light */
 }
 
 html,
@@ -25,11 +45,822 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  font-size: 17px;
   overscroll-behavior: none;
 }
 
-/* Botões devem aceitar cliques */
-button, a {
+button,
+a {
   touch-action: manipulation;
   cursor: pointer;
+}
+
+/* 
+════════════════════════════════════════════════════════════════════════════
+   UTILITÁRIOS DE TIPOGRAFIA
+   Tamanhos fixos para consistência entre plataformas.
+════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+  .text-xs {
+    font-size: 0.8125rem !important;
+    line-height: 1.25rem !important;
+  }
+  .text-sm {
+    font-size: 0.9375rem !important;
+    line-height: 1.45rem !important;
+  }
+  .text-base {
+    font-size: 1.0625rem !important;
+    line-height: 1.65rem !important;
+  }
+  .text-lg {
+    font-size: 1.1875rem !important;
+    line-height: 1.75rem !important;
+  }
+  .text-xl {
+    font-size: 1.375rem !important;
+    line-height: 1.9rem !important;
+  }
+  .text-2xl {
+    font-size: 1.625rem !important;
+    line-height: 2.1rem !important;
+  }
+  .text-3xl {
+    font-size: 2rem !important;
+    line-height: 2.45rem !important;
+  }
+
+  @media (min-width: 640px) {
+    .sm\:text-xs {
+      font-size: 0.8125rem !important;
+      line-height: 1.25rem !important;
+    }
+    .sm\:text-sm {
+      font-size: 0.9375rem !important;
+      line-height: 1.45rem !important;
+    }
+    .sm\:text-base {
+      font-size: 1.0625rem !important;
+      line-height: 1.65rem !important;
+    }
+    .sm\:text-lg {
+      font-size: 1.1875rem !important;
+      line-height: 1.75rem !important;
+    }
+    .sm\:text-xl {
+      font-size: 1.375rem !important;
+      line-height: 1.9rem !important;
+    }
+    .sm\:text-2xl {
+      font-size: 1.625rem !important;
+      line-height: 2.1rem !important;
+    }
+    .sm\:text-3xl {
+      font-size: 2rem !important;
+      line-height: 2.45rem !important;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .md\:text-xs {
+      font-size: 0.8125rem !important;
+      line-height: 1.25rem !important;
+    }
+    .md\:text-sm {
+      font-size: 0.9375rem !important;
+      line-height: 1.45rem !important;
+    }
+    .md\:text-base {
+      font-size: 1.0625rem !important;
+      line-height: 1.65rem !important;
+    }
+    .md\:text-lg {
+      font-size: 1.1875rem !important;
+      line-height: 1.75rem !important;
+    }
+    .md\:text-xl {
+      font-size: 1.375rem !important;
+      line-height: 1.9rem !important;
+    }
+    .md\:text-2xl {
+      font-size: 1.625rem !important;
+      line-height: 2.1rem !important;
+    }
+    .md\:text-3xl {
+      font-size: 2rem !important;
+      line-height: 2.45rem !important;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     TEMA DARK — todas as classes Tailwind usadas no sistema
+  ════════════════════════════════════════════════════════════════════════════ */
+
+  /* Fundos neutros */
+  .theme-dark .bg-gray-950 {
+    background-color: #030712 !important;
+  }
+  .theme-dark .bg-gray-900 {
+    background-color: #111827 !important;
+  }
+  .theme-dark .bg-gray-900\/90 {
+    background-color: rgb(17 24 39 / 0.9) !important;
+  }
+  .theme-dark .bg-gray-800 {
+    background-color: #1f2937 !important;
+  }
+  .theme-dark .bg-gray-800\/80 {
+    background-color: rgb(31 41 55 / 0.8) !important;
+  }
+  .theme-dark .bg-gray-800\/50 {
+    background-color: rgb(31 41 55 / 0.5) !important;
+  }
+  .theme-dark .bg-gray-700 {
+    background-color: #374151 !important;
+  }
+  .theme-dark .bg-gray-700\/50 {
+    background-color: rgb(55 65 81 / 0.5) !important;
+  }
+  .theme-dark .bg-gray-700\/30 {
+    background-color: rgb(55 65 81 / 0.3) !important;
+  }
+  .theme-dark .bg-gray-600 {
+    background-color: #4b5563 !important;
+  }
+  .theme-dark .bg-gray-600\/50 {
+    background-color: rgb(75 85 99 / 0.5) !important;
+  }
+  .theme-dark .bg-gray-500 {
+    background-color: #6b7280 !important;
+  }
+  .theme-dark .bg-gray-400 {
+    background-color: #9ca3af !important;
+  }
+  .theme-dark .bg-gray-100 {
+    background-color: rgb(156 163 175 / 0.15) !important;
+  }
+
+  /* Bordas neutras */
+  .theme-dark .border-gray-900 {
+    border-color: #111827 !important;
+  }
+  .theme-dark .border-gray-800 {
+    border-color: #1f2937 !important;
+  }
+  .theme-dark .border-gray-700 {
+    border-color: #374151 !important;
+  }
+  .theme-dark .border-gray-600 {
+    border-color: #4b5563 !important;
+  }
+  .theme-dark .border-gray-500 {
+    border-color: #6b7280 !important;
+  }
+
+  /* Textos neutros */
+  .theme-dark .text-white {
+    color: #ffffff !important;
+  }
+  .theme-dark .text-gray-50 {
+    color: #f9fafb !important;
+  }
+  .theme-dark .text-gray-100 {
+    color: #f3f4f6 !important;
+  }
+  .theme-dark .text-gray-200 {
+    color: #e5e7eb !important;
+  }
+  .theme-dark .text-gray-300 {
+    color: #d1d5db !important;
+  }
+  .theme-dark .text-gray-400 {
+    color: #9ca3af !important;
+  }
+  .theme-dark .text-gray-500 {
+    color: #6b7280 !important;
+  }
+  .theme-dark .text-gray-600 {
+    color: #4b5563 !important;
+  }
+  .theme-dark .text-gray-700 {
+    color: #374151 !important;
+  }
+
+  .theme-dark .placeholder-gray-500::placeholder {
+    color: #6b7280 !important;
+  }
+
+  /* Inputs / selects / textareas */
+  .theme-dark input,
+  .theme-dark textarea,
+  .theme-dark select {
+    color: #f9fafb;
+    background-color: #374151;
+    border-color: #4b5563;
+  }
+  .theme-dark input::placeholder,
+  .theme-dark textarea::placeholder {
+    color: #6b7280;
+  }
+
+  /* Textos coloridos */
+  .theme-dark .text-orange-400 {
+    color: #fb923c !important;
+  }
+  .theme-dark .text-orange-500 {
+    color: #f97316 !important;
+  }
+  .theme-dark .text-blue-400 {
+    color: #60a5fa !important;
+  }
+  .theme-dark .text-blue-500 {
+    color: #3b82f6 !important;
+  }
+  .theme-dark .text-blue-300 {
+    color: #93c5fd !important;
+  }
+  .theme-dark .text-purple-400 {
+    color: #c084fc !important;
+  }
+  .theme-dark .text-purple-500 {
+    color: #a855f7 !important;
+  }
+  .theme-dark .text-green-400 {
+    color: #4ade80 !important;
+  }
+  .theme-dark .text-green-500 {
+    color: #22c55e !important;
+  }
+  .theme-dark .text-green-300 {
+    color: #86efac !important;
+  }
+  .theme-dark .text-red-400 {
+    color: #f87171 !important;
+  }
+  .theme-dark .text-red-300 {
+    color: #fca5a5 !important;
+  }
+  .theme-dark .text-yellow-400 {
+    color: #facc15 !important;
+  }
+  .theme-dark .text-pink-400 {
+    color: #f472b6 !important;
+  }
+
+  /* Textos de status badge */
+  .theme-dark .text-yellow-700 {
+    color: #fde047 !important;
+  }
+  .theme-dark .text-blue-700 {
+    color: #93c5fd !important;
+  }
+  .theme-dark .text-green-700 {
+    color: #86efac !important;
+  }
+  .theme-dark .text-red-700 {
+    color: #fca5a5 !important;
+  }
+
+  /* Fundos coloridos com opacidade */
+  .theme-dark .bg-orange-500\/20 {
+    background-color: rgb(249 115 22 / 0.2) !important;
+  }
+  .theme-dark .bg-orange-500\/10 {
+    background-color: rgb(249 115 22 / 0.1) !important;
+  }
+  .theme-dark .bg-blue-500\/20 {
+    background-color: rgb(59 130 246 / 0.2) !important;
+  }
+  .theme-dark .bg-blue-500\/10 {
+    background-color: rgb(59 130 246 / 0.1) !important;
+  }
+  .theme-dark .bg-purple-500\/20 {
+    background-color: rgb(168 85 247 / 0.2) !important;
+  }
+  .theme-dark .bg-purple-500\/10 {
+    background-color: rgb(168 85 247 / 0.1) !important;
+  }
+  .theme-dark .bg-green-500\/20 {
+    background-color: rgb(34 197 94 / 0.2) !important;
+  }
+  .theme-dark .bg-green-500\/10 {
+    background-color: rgb(34 197 94 / 0.1) !important;
+  }
+  .theme-dark .bg-red-500\/20 {
+    background-color: rgb(239 68 68 / 0.2) !important;
+  }
+  .theme-dark .bg-red-500\/10 {
+    background-color: rgb(239 68 68 / 0.1) !important;
+  }
+  .theme-dark .bg-yellow-500\/20 {
+    background-color: rgb(234 179 8 / 0.2) !important;
+  }
+  .theme-dark .bg-yellow-500\/10 {
+    background-color: rgb(234 179 8 / 0.1) !important;
+  }
+  .theme-dark .bg-pink-500\/20 {
+    background-color: rgb(236 72 153 / 0.2) !important;
+  }
+  .theme-dark .bg-pink-500\/10 {
+    background-color: rgb(236 72 153 / 0.1) !important;
+  }
+
+  /* Fundos sólidos coloridos (dot indicators) */
+  .theme-dark .bg-green-400 {
+    background-color: #4ade80 !important;
+  }
+  .theme-dark .bg-orange-400 {
+    background-color: #fb923c !important;
+  }
+  .theme-dark .bg-red-400 {
+    background-color: #f87171 !important;
+  }
+  .theme-dark .bg-blue-400 {
+    background-color: #60a5fa !important;
+  }
+  .theme-dark .bg-purple-400 {
+    background-color: #c084fc !important;
+  }
+  .theme-dark .bg-yellow-400 {
+    background-color: #facc15 !important;
+  }
+
+  /* Status badges */
+  .theme-dark .bg-yellow-100 {
+    background-color: rgb(234 179 8 / 0.15) !important;
+  }
+  .theme-dark .bg-blue-100 {
+    background-color: rgb(59 130 246 / 0.15) !important;
+  }
+  .theme-dark .bg-green-100 {
+    background-color: rgb(34 197 94 / 0.15) !important;
+  }
+  .theme-dark .bg-red-100 {
+    background-color: rgb(239 68 68 / 0.15) !important;
+  }
+
+  /* Bordas coloridas com opacidade */
+  .theme-dark .border-orange-500\/30 {
+    border-color: rgb(249 115 22 / 0.3) !important;
+  }
+  .theme-dark .border-orange-500\/20 {
+    border-color: rgb(249 115 22 / 0.2) !important;
+  }
+  .theme-dark .border-blue-500\/30 {
+    border-color: rgb(59 130 246 / 0.3) !important;
+  }
+  .theme-dark .border-blue-500\/20 {
+    border-color: rgb(59 130 246 / 0.2) !important;
+  }
+  .theme-dark .border-purple-500\/30 {
+    border-color: rgb(168 85 247 / 0.3) !important;
+  }
+  .theme-dark .border-purple-500\/20 {
+    border-color: rgb(168 85 247 / 0.2) !important;
+  }
+  .theme-dark .border-green-500\/30 {
+    border-color: rgb(34 197 94 / 0.3) !important;
+  }
+  .theme-dark .border-green-500\/20 {
+    border-color: rgb(34 197 94 / 0.2) !important;
+  }
+  .theme-dark .border-red-500\/30 {
+    border-color: rgb(239 68 68 / 0.3) !important;
+  }
+  .theme-dark .border-red-500\/20 {
+    border-color: rgb(239 68 68 / 0.2) !important;
+  }
+  .theme-dark .border-yellow-500\/30 {
+    border-color: rgb(234 179 8 / 0.3) !important;
+  }
+  .theme-dark .border-pink-500\/30 {
+    border-color: rgb(236 72 153 / 0.3) !important;
+  }
+  .theme-dark .border-green-700 {
+    border-color: #15803d !important;
+  }
+  .theme-dark .border-orange-700 {
+    border-color: #c2410c !important;
+  }
+
+  /* MetricCard icons */
+  .theme-dark .bg-orange-50 {
+    background-color: rgb(249 115 22 / 0.15) !important;
+  }
+  .theme-dark .bg-blue-50 {
+    background-color: rgb(59 130 246 / 0.15) !important;
+  }
+  .theme-dark .bg-green-50 {
+    background-color: rgb(34 197 94 / 0.15) !important;
+  }
+  .theme-dark .bg-purple-50 {
+    background-color: rgb(168 85 247 / 0.15) !important;
+  }
+
+  .theme-dark .ring-orange-100 {
+    --tw-ring-color: rgb(249 115 22 / 0.15) !important;
+  }
+  .theme-dark .ring-blue-100 {
+    --tw-ring-color: rgb(59 130 246 / 0.15) !important;
+  }
+  .theme-dark .ring-green-100 {
+    --tw-ring-color: rgb(34 197 94 / 0.15) !important;
+  }
+  .theme-dark .ring-purple-100 {
+    --tw-ring-color: rgb(168 85 247 / 0.15) !important;
+  }
+
+  /* Cards de mesas */
+  .theme-dark .bg-green-900\/30 {
+    background-color: rgb(20 83 45 / 0.3) !important;
+  }
+  .theme-dark .bg-orange-900\/30 {
+    background-color: rgb(124 45 18 / 0.3) !important;
+  }
+
+  /* Sombras */
+  .theme-dark .shadow-orange-900\/40 {
+    --tw-shadow-color: rgb(124 45 18 / 0.4) !important;
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     TEMA LIGHT — espelho completo do dark com paleta clara
+  ════════════════════════════════════════════════════════════════════════════ */
+
+  /* Fundos neutros */
+  .theme-light .bg-gray-950 {
+    background-color: #cbd5e1 !important;
+  }
+  .theme-light .bg-gray-900 {
+    background-color: #e3e8ee !important;
+  }
+  .theme-light .bg-gray-900\/90 {
+    background-color: rgb(227 232 238 / 0.9) !important;
+  }
+  .theme-light .bg-gray-800 {
+    background-color: #edf2f7 !important;
+  }
+  .theme-light .bg-gray-800\/80 {
+    background-color: rgb(237 242 247 / 0.86) !important;
+  }
+  .theme-light .bg-gray-800\/50 {
+    background-color: rgb(237 242 247 / 0.74) !important;
+  }
+  .theme-light .bg-gray-700 {
+    background-color: #dde2ea !important;
+  }
+  .theme-light .bg-gray-700\/50 {
+    background-color: rgb(221 226 234 / 0.78) !important;
+  }
+  .theme-light .bg-gray-700\/30 {
+    background-color: rgb(221 226 234 / 0.5) !important;
+  }
+  .theme-light .bg-gray-600 {
+    background-color: #bcc7d6 !important;
+  }
+  .theme-light .bg-gray-600\/50 {
+    background-color: rgb(188 199 214 / 0.72) !important;
+  }
+  .theme-light .bg-gray-500 {
+    background-color: #94a3b8 !important;
+  }
+  .theme-light .bg-gray-400 {
+    background-color: #64748b !important;
+  }
+  .theme-light .bg-gray-100 {
+    background-color: rgb(107 114 128 / 0.15) !important;
+  }
+
+  /* Bordas neutras */
+  .theme-light .border-gray-900 {
+    border-color: #cbd5e1 !important;
+  }
+  .theme-light .border-gray-800 {
+    border-color: #d1dae4 !important;
+  }
+  .theme-light .border-gray-700 {
+    border-color: #bcc7d6 !important;
+  }
+  .theme-light .border-gray-600 {
+    border-color: #b8c2d0 !important;
+  }
+  .theme-light .border-gray-500 {
+    border-color: #aeb8c6 !important;
+  }
+
+  /* Textos neutros */
+  .theme-light .text-white {
+    color: #111827 !important;
+  }
+  .theme-light .text-gray-50 {
+    color: #1f2937 !important;
+  }
+  .theme-light .text-gray-100 {
+    color: #1f2937 !important;
+  }
+  .theme-light .text-gray-200 {
+    color: #1f2937 !important;
+  }
+  .theme-light .text-gray-300 {
+    color: #374151 !important;
+  }
+  .theme-light .text-gray-400 {
+    color: #4b5563 !important;
+  }
+  .theme-light .text-gray-500 {
+    color: #64748b !important;
+  }
+  .theme-light .text-gray-600 {
+    color: #94a3b8 !important;
+  }
+  .theme-light .text-gray-700 {
+    color: #94a3b8 !important;
+  }
+
+  .theme-light .placeholder-gray-500::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* Inputs / selects / textareas */
+  .theme-light input,
+  .theme-light textarea,
+  .theme-light select {
+    color: #111827;
+    background-color: #dde5ee;
+    border-color: #bcc6d4;
+    box-shadow: inset 0 1px 1px rgb(255 255 255 / 0.35);
+  }
+  .theme-light input::placeholder,
+  .theme-light textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  /* Textos coloridos — mais escuros para contraste no fundo claro */
+  .theme-light .text-orange-400 {
+    color: #c2410c !important;
+  }
+  .theme-light .text-orange-500 {
+    color: #c2410c !important;
+  }
+  .theme-light .text-blue-400 {
+    color: #1d4ed8 !important;
+  }
+  .theme-light .text-blue-500 {
+    color: #1d4ed8 !important;
+  }
+  .theme-light .text-blue-300 {
+    color: #1e40af !important;
+  }
+  .theme-light .text-purple-400 {
+    color: #7e22ce !important;
+  }
+  .theme-light .text-purple-500 {
+    color: #7e22ce !important;
+  }
+  .theme-light .text-green-400 {
+    color: #15803d !important;
+  }
+  .theme-light .text-green-500 {
+    color: #15803d !important;
+  }
+  .theme-light .text-green-300 {
+    color: #166534 !important;
+  }
+  .theme-light .text-red-400 {
+    color: #b91c1c !important;
+  }
+  .theme-light .text-red-300 {
+    color: #991b1b !important;
+  }
+  .theme-light .text-yellow-400 {
+    color: #a16207 !important;
+  }
+  .theme-light .text-pink-400 {
+    color: #be185d !important;
+  }
+
+  /* Textos de status badge */
+  .theme-light .text-yellow-700 {
+    color: #854d0e !important;
+  }
+  .theme-light .text-blue-700 {
+    color: #1e3a8a !important;
+  }
+  .theme-light .text-green-700 {
+    color: #14532d !important;
+  }
+  .theme-light .text-red-700 {
+    color: #7f1d1d !important;
+  }
+
+  /* Fundos coloridos com opacidade */
+  .theme-light .bg-orange-500\/20 {
+    background-color: rgb(249 115 22 / 0.15) !important;
+  }
+  .theme-light .bg-orange-500\/10 {
+    background-color: rgb(249 115 22 / 0.12) !important;
+  }
+  .theme-light .bg-blue-500\/20 {
+    background-color: rgb(59 130 246 / 0.15) !important;
+  }
+  .theme-light .bg-blue-500\/10 {
+    background-color: rgb(59 130 246 / 0.12) !important;
+  }
+  .theme-light .bg-purple-500\/20 {
+    background-color: rgb(168 85 247 / 0.15) !important;
+  }
+  .theme-light .bg-purple-500\/10 {
+    background-color: rgb(168 85 247 / 0.12) !important;
+  }
+  .theme-light .bg-green-500\/20 {
+    background-color: rgb(34 197 94 / 0.15) !important;
+  }
+  .theme-light .bg-green-500\/10 {
+    background-color: rgb(34 197 94 / 0.12) !important;
+  }
+  .theme-light .bg-red-500\/20 {
+    background-color: rgb(239 68 68 / 0.15) !important;
+  }
+  .theme-light .bg-red-500\/10 {
+    background-color: rgb(239 68 68 / 0.12) !important;
+  }
+  .theme-light .bg-yellow-500\/20 {
+    background-color: rgb(234 179 8 / 0.15) !important;
+  }
+  .theme-light .bg-yellow-500\/10 {
+    background-color: rgb(234 179 8 / 0.12) !important;
+  }
+  .theme-light .bg-pink-500\/20 {
+    background-color: rgb(236 72 153 / 0.15) !important;
+  }
+  .theme-light .bg-pink-500\/10 {
+    background-color: rgb(236 72 153 / 0.12) !important;
+  }
+
+  /* Fundos sólidos coloridos (dot indicators) */
+  .theme-light .bg-green-400 {
+    background-color: #16a34a !important;
+  }
+  .theme-light .bg-orange-400 {
+    background-color: #ea580c !important;
+  }
+  .theme-light .bg-red-400 {
+    background-color: #dc2626 !important;
+  }
+  .theme-light .bg-blue-400 {
+    background-color: #2563eb !important;
+  }
+  .theme-light .bg-purple-400 {
+    background-color: #9333ea !important;
+  }
+  .theme-light .bg-yellow-400 {
+    background-color: #ca8a04 !important;
+  }
+
+  /* Status badges */
+  .theme-light .bg-yellow-100 {
+    background-color: rgb(234 179 8 / 0.15) !important;
+  }
+  .theme-light .bg-blue-100 {
+    background-color: rgb(59 130 246 / 0.15) !important;
+  }
+  .theme-light .bg-green-100 {
+    background-color: rgb(34 197 94 / 0.15) !important;
+  }
+  .theme-light .bg-red-100 {
+    background-color: rgb(239 68 68 / 0.15) !important;
+  }
+
+  /* Bordas coloridas com opacidade */
+  .theme-light .border-orange-500\/30 {
+    border-color: rgb(249 115 22 / 0.4) !important;
+  }
+  .theme-light .border-orange-500\/20 {
+    border-color: rgb(249 115 22 / 0.35) !important;
+  }
+  .theme-light .border-blue-500\/30 {
+    border-color: rgb(59 130 246 / 0.4) !important;
+  }
+  .theme-light .border-blue-500\/20 {
+    border-color: rgb(59 130 246 / 0.35) !important;
+  }
+  .theme-light .border-purple-500\/30 {
+    border-color: rgb(168 85 247 / 0.4) !important;
+  }
+  .theme-light .border-purple-500\/20 {
+    border-color: rgb(168 85 247 / 0.35) !important;
+  }
+  .theme-light .border-green-500\/30 {
+    border-color: rgb(34 197 94 / 0.4) !important;
+  }
+  .theme-light .border-green-500\/20 {
+    border-color: rgb(34 197 94 / 0.35) !important;
+  }
+  .theme-light .border-red-500\/30 {
+    border-color: rgb(239 68 68 / 0.4) !important;
+  }
+  .theme-light .border-red-500\/20 {
+    border-color: rgb(239 68 68 / 0.35) !important;
+  }
+  .theme-light .border-yellow-500\/30 {
+    border-color: rgb(234 179 8 / 0.4) !important;
+  }
+  .theme-light .border-pink-500\/30 {
+    border-color: rgb(236 72 153 / 0.4) !important;
+  }
+  .theme-light .border-green-700 {
+    border-color: rgb(34 197 94 / 0.5) !important;
+  }
+  .theme-light .border-orange-700 {
+    border-color: rgb(249 115 22 / 0.5) !important;
+  }
+
+  /* MetricCard icons */
+  .theme-light .bg-orange-50 {
+    background-color: rgb(249 115 22 / 0.12) !important;
+  }
+  .theme-light .bg-blue-50 {
+    background-color: rgb(59 130 246 / 0.12) !important;
+  }
+  .theme-light .bg-green-50 {
+    background-color: rgb(34 197 94 / 0.12) !important;
+  }
+  .theme-light .bg-purple-50 {
+    background-color: rgb(168 85 247 / 0.12) !important;
+  }
+
+  .theme-light .ring-orange-100 {
+    --tw-ring-color: rgb(249 115 22 / 0.2) !important;
+  }
+  .theme-light .ring-blue-100 {
+    --tw-ring-color: rgb(59 130 246 / 0.2) !important;
+  }
+  .theme-light .ring-green-100 {
+    --tw-ring-color: rgb(34 197 94 / 0.2) !important;
+  }
+  .theme-light .ring-purple-100 {
+    --tw-ring-color: rgb(168 85 247 / 0.2) !important;
+  }
+
+  /* Cards de mesas */
+  .theme-light .bg-green-900\/30 {
+    background-color: rgb(34 197 94 / 0.1) !important;
+  }
+  .theme-light .bg-orange-900\/30 {
+    background-color: rgb(249 115 22 / 0.1) !important;
+  }
+
+  /* Sombras */
+  .theme-light .shadow-orange-900\/40 {
+    --tw-shadow-color: rgb(251 146 60 / 0.25) !important;
+  }
+
+  /* ── QR Scanner ── */
+  #qr-reader {
+    border: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  #qr-reader video {
+    width: 100% !important;
+    height: 300px !important;
+    object-fit: cover !important;
+    border-radius: 16px !important;
+  }
+
+  #qr-reader img,
+  #qr-reader__dashboard,
+  #qr-reader__status_span,
+  #qr-reader__camera_selection,
+  #qr-reader__dashboard_section_csr button:last-child {
+    display: none !important;
+  }
+
+  /* ── Esconde scrollbar horizontal nas categorias ── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ════════════════════════════════════════════════════════════════════════════
+     ANIMAÇÕES GLOBAIS
+  ════════════════════════════════════════════════════════════════════════════ */
+  @keyframes shrink {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
