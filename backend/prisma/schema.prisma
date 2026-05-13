@@ -50,7 +50,7 @@ model TableSession {
   status       TableSessionStatus @default(OPEN)
   openedAt     DateTime           @default(now())
   closedAt     DateTime?
-
+  payments     Payment[]
   table      Table       @relation(fields: [tableId], references: [id])
   restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
   waiter     Employee?   @relation(fields: [waiterId], references: [id])
@@ -69,16 +69,22 @@ enum TableSessionStatus {
 // ─── CLIENTES ────────────────────────────────────────────────────────────────
 
 model Guest {
-  id           String   @id @default(uuid())
-  name         String?
-  email        String   @unique
-  passwordHash String?
-  googleId     String?  @unique
-  createdAt    DateTime @default(now())
-
-  sessions     TableSession[]
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  phone        String?
+  cpf          String?        @unique
+  address      String?
+  neighborhood String?
+  city         String?
+  notes        String?
+  passwordHash String
+  createdAt    DateTime       @default(now())
   orders       Order[]
+  sessions     TableSession[]
+  debts        CustomerDebt[]
 }
+
 
 // ─── FUNCIONÁRIOS ────────────────────────────────────────────────────────────
 
@@ -92,7 +98,7 @@ model Employee {
   restaurantId String
   active       Boolean      @default(true)
   createdAt    DateTime     @default(now())
-
+  cashierPayments Payment[] @relation("CashierPayments")
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id])
   sessions     TableSession[]
 }
@@ -102,6 +108,7 @@ enum EmployeeRole {
   WAITER
   KITCHEN
   BAR
+  CASHIER
 }
 
 // ─── CARDÁPIO ────────────────────────────────────────────────────────────────
@@ -194,7 +201,7 @@ model Bill {
   subtotal       Float
   serviceCharge  Float         @default(0)
   total          Float
-  paymentMethod  PaymentMethod
+  status         PaymentStatus @default(PENDING)
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
 
@@ -203,9 +210,20 @@ model Bill {
 
 enum PaymentMethod {
   CASH
-  CREDIT_CARD
-  DEBIT_CARD
   PIX
+  DEBIT
+  CREDIT
+  VOUCHER
+  CHECK
+  STORE_CREDIT
+  MIXED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
 }
 
 // ─── AVALIAÇÃO ───────────────────────────────────────────────────────────────
@@ -276,6 +294,7 @@ model StockItem {
 
 model StockEntry {
   id           String    @id @default(uuid())
+  groupId      String?
   stockItemId  String
   supplierId   String?
   restaurantId String
@@ -333,3 +352,59 @@ model PurchaseOrderItem {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   stockItem       StockItem     @relation(fields: [stockItemId], references: [id])
 }
+
+// ─── CAIXA ────────────────────────────────────────────────────────────────
+model Payment {
+  id             String        @id @default(uuid())
+  sessionId      String
+  restaurantId   String
+  cashierId      String
+  totalAmount    Float
+  serviceCharge  Float         @default(0)
+  discount       Float         @default(0)
+  finalAmount    Float
+  method         PaymentMethod
+  status         PaymentStatus @default(PAID)
+  cashReceived   Float?
+  change         Float?
+  notes          String?
+  authorizedBy   String?
+  createdAt      DateTime      @default(now())
+  session        TableSession  @relation(fields: [sessionId], references: [id])
+  cashier        Employee      @relation("CashierPayments", fields: [cashierId], references: [id])
+  paymentItems   PaymentItem[]
+}
+
+model PaymentItem {
+  id        String        @id @default(uuid())
+  paymentId String
+  method    PaymentMethod
+  amount    Float
+  payment   Payment       @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model CustomerDebt {
+  id           String    @id @default(uuid())
+  guestId      String
+  restaurantId String
+  totalDebt    Float     @default(0)
+  paidAmount   Float     @default(0)
+  balance      Float     @default(0)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  guest        Guest     @relation(fields: [guestId], references: [id])
+  transactions DebtTransaction[]
+}
+
+model DebtTransaction {
+  id             String      @id @default(uuid())
+  customerDebtId String
+  amount         Float
+  type           String
+  description    String?
+  authorizedBy   String?
+  createdAt      DateTime    @default(now())
+  customerDebt   CustomerDebt @relation(fields: [customerDebtId], references: [id])
+}
+
