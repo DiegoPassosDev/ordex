@@ -62,6 +62,14 @@ export class MenuService {
 
   async updateItem(id: string, dto: UpdateMenuItemDto) {
     await this.findOneItem(id);
+
+    if (dto.categoryId) {
+      const category = await this.prisma.category.findUnique({
+        where: { id: dto.categoryId },
+      });
+      if (!category) throw new NotFoundException('Categoria não encontrada.');
+    }
+
     return this.prisma.menuItem.update({ where: { id }, data: dto });
   }
 

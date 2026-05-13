@@ -20,15 +20,32 @@ export class SessionsService {
       where: { tableId: dto.tableId, status: { not: 'CLOSED' } },
     });
 
-    if (existing) return existing;
+    // Se já existe sessão aberta, vincula o guest (caso ainda não esteja) e retorna
+    if (existing) {
+      if (dto.guestId) {
+        await this.prisma.tableSession.update({
+          where: { id: existing.id },
+          data: { guests: { connect: { id: dto.guestId } } },
+        });
+      }
+      return existing;
+    }
 
-    return this.prisma.tableSession.create({
+    const session = await this.prisma.tableSession.create({
       data: {
         tableId: dto.tableId,
         restaurantId: dto.restaurantId,
+        // Conecta o guest na criação, se informado
+        ...(dto.guestId && {
+          guests: { connect: { id: dto.guestId } },
+        }),
       },
       include: { table: true },
     });
+
+    this.gateway.notifyTableSessionUpdate(dto.restaurantId, session);
+
+    return session;
   }
 
   async findOne(id: string) {
@@ -53,8 +70,12 @@ export class SessionsService {
       include: {
         table: true,
         waiter: true,
+        guests: true,         // ← inclui os guests vinculados à sessão
         orders: {
-          include: { items: { include: { menuItem: true } } },
+          include: {
+            items: { include: { menuItem: true } },
+            guest: true,
+          },
         },
       },
       orderBy: { openedAt: 'asc' },
@@ -66,11 +87,15 @@ export class SessionsService {
     if (session.status === 'CLOSED')
       throw new BadRequestException('Sessão já encerrada.');
 
-    return this.prisma.tableSession.update({
+    const updated = await this.prisma.tableSession.update({
       where: { id },
       data: { waiterId: dto.waiterId },
       include: { table: true, waiter: true },
     });
+
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
+
+    return updated;
   }
 
   async requestBill(id: string) {
@@ -85,6 +110,7 @@ export class SessionsService {
     });
 
     this.gateway.notifyBillRequest(session.restaurantId, id, updated);
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
 
     return updated;
   }
@@ -92,11 +118,15 @@ export class SessionsService {
   async close(id: string) {
     const session = await this.findOne(id);
 
-    return this.prisma.tableSession.update({
+    const updated = await this.prisma.tableSession.update({
       where: { id },
       data: { status: 'CLOSED', closedAt: new Date() },
       include: { table: true },
     });
+
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
+
+    return updated;
   }
 
   async callWaiter(id: string, reason: string) {

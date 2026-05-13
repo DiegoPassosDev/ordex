@@ -1,4 +1,4 @@
-import { IsUUID } from 'class-validator';
+import { IsUUID, IsOptional } from 'class-validator';
 
 export class OpenSessionDto {
   @IsUUID()
@@ -6,4 +6,8 @@ export class OpenSessionDto {
 
   @IsUUID()
   restaurantId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  guestId?: string;
 }

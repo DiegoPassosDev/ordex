@@ -31,6 +31,10 @@ export class UpdateMenuItemDto {
   prepTimeMin?: number;
 
   @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
   @IsBoolean()
   available?: boolean;
 }

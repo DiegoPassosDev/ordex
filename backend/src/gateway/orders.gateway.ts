@@ -77,4 +77,11 @@ export class OrdersGateway
       .to(`session_${sessionId}`)
       .emit('bill_requested', data);
   }
+
+  // Notifica mudanca na ocupacao/status de mesas
+  notifyTableSessionUpdate(restaurantId: string, data: any) {
+    this.server
+      .to(`restaurant_${restaurantId}`)
+      .emit('table_session_updated', data);
+  }
 }
