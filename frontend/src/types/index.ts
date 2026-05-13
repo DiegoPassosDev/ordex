@@ -8,7 +8,7 @@ export type OrderStatus =
 
 export type TableSessionStatus = "OPEN" | "REQUESTING_BILL" | "CLOSED";
 
-export type EmployeeRole = "MANAGER" | "WAITER" | "KITCHEN" | "BAR";
+export type EmployeeRole = "MANAGER" | "WAITER" | "KITCHEN" | "BAR" | "CASHIER";
 
 export type CategoryType = "FOOD" | "DRINK" | "DESSERT";
 
@@ -41,6 +41,7 @@ export interface TableSession {
   table: Table;
   waiter?: Employee;
   orders: Order[];
+  guests: Guest[];
 }
 
 export interface MenuItem {
@@ -80,6 +81,7 @@ export interface Order {
   items: OrderItem[];
   statusHistory: OrderStatusHistory[];
   session?: TableSession;
+  guest?: Guest;
 }
 
 export interface OrderStatusHistory {

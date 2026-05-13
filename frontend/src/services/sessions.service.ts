@@ -1,13 +1,19 @@
 import { api } from '@/lib/api';
+import type { Table } from '@/types';
 
 export const sessionsService = {
-  async open(tableId: string, restaurantId: string) {
-    const { data } = await api.post('/sessions', { tableId, restaurantId });
-    return data;
-  },
+  async open(tableId: string, restaurantId: string, guestId?: string) {
+  const { data } = await api.post('/sessions', { tableId, restaurantId, guestId });
+  return data;
+},
 
   async getOne(sessionId: string) {
     const { data } = await api.get(`/sessions/${sessionId}`);
+    return data;
+  },
+
+  async getTable(tableId: string): Promise<Table> {
+    const { data } = await api.get(`/tables/${tableId}`);
     return data;
   },
 

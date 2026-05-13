@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { useAuthStore } from "@/store/auth.store";
 import { sessionsService } from "@/services/sessions.service";
 import { api } from "@/lib/api";
+import { useSocket } from "@/hooks/useSocket";
 import QRCode from "qrcode";
 import {
   LayoutGrid,
@@ -73,9 +74,19 @@ export default function TablesPage() {
     loadData();
   }, []);
 
-  async function loadData() {
+  useSocket(
+    { type: "restaurant", id: restaurantId },
+    {
+      table_session_updated: () => loadData(false),
+      new_order: () => loadData(false),
+      order_status_updated: () => loadData(false),
+      bill_requested: () => loadData(false),
+    },
+  );
+
+  async function loadData(showSpinner = true) {
     try {
-      setLoading(true);
+      if (showSpinner) setLoading(true);
       const [tablesData, sessionsData] = await Promise.all([
         api.get(`/tables/restaurant/${restaurantId}`).then((r) => r.data),
         sessionsService.getActiveByRestaurant(restaurantId),
@@ -141,7 +152,7 @@ export default function TablesPage() {
     const table = tables.find((t) => t.id === tableId);
     if (table) {
       QRCode.toDataURL(
-        `${window.location.origin}/table/${tableId}`,
+        `${window.location.origin}/table?tableId=${tableId}`,
         {
           width: 300,
           margin: 1,
@@ -189,7 +200,7 @@ export default function TablesPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
@@ -233,7 +244,11 @@ export default function TablesPage() {
             </div>
           </div>
           <div className="flex justify-end mb-6">
-            <Button icon={Plus} onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
+            <Button
+              icon={Plus}
+              onClick={() => setShowAddModal(true)}
+              className="w-full sm:w-auto"
+            >
               Nova Mesa
             </Button>
           </div>
@@ -252,19 +267,25 @@ export default function TablesPage() {
                   <p className="text-2xl sm:text-3xl font-bold text-white">
                     {tables.length}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-1">Total de mesas</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                    Total de mesas
+                  </p>
                 </div>
                 <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 sm:p-5">
                   <p className="text-2xl sm:text-3xl font-bold text-green-400">
                     {sessions.length}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-1">Mesas ocupadas</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                    Mesas ocupadas
+                  </p>
                 </div>
                 <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 sm:p-5">
                   <p className="text-2xl sm:text-3xl font-bold text-gray-400">
                     {tables.length - sessions.length}
                   </p>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-1">Mesas livres</p>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                    Mesas livres
+                  </p>
                 </div>
               </div>
 
@@ -272,10 +293,28 @@ export default function TablesPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Todas as Mesas</CardTitle>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-gray-500" />
+                      Livre
+                    </span>
+
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-green-400" />
+                      Ocupada
+                    </span>
+
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-orange-400" />
+                      Conta
+                    </span>
+                  </div>
                   <span className="text-xs text-gray-400">
                     {tables.length} mesas cadastradas
                   </span>
                 </CardHeader>
+
+                
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
                   {tables.map((table) => {
@@ -384,14 +423,7 @@ export default function TablesPage() {
               />
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setShowAddModal(false)}
-              >
-                Cancelar
-              </Button>
+            <div className="flex justify-center gap-3">
               <Button
                 className="flex-1"
                 icon={Plus}
@@ -399,6 +431,13 @@ export default function TablesPage() {
                 onClick={handleAddTable}
               >
                 Criar Mesa
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancelar
               </Button>
             </div>
           </div>
@@ -435,7 +474,7 @@ export default function TablesPage() {
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex justify-center gap-2">
               <Button
                 variant="secondary"
                 className="flex-1 bg-gray-700 border-gray-600 text-gray-300"

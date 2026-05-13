@@ -13,11 +13,16 @@ function deleteCookie() {
 }
 
 interface AuthState {
+  
   token: string | null;
   guest: Guest | null;
   employee: Employee | null;
   restaurantId: string | null;
   sessionId: string | null;
+  tableId: string | null;     
+  tableNumber: string | null;  
+
+  
   setGuestAuth: (
     token: string,
     guest: Guest,
@@ -26,18 +31,25 @@ interface AuthState {
   ) => void;
   setEmployeeAuth: (token: string, employee: Employee) => void;
   setSessionId: (sessionId: string) => void;
-  clearAuth: () => void;
+  setTableId: (tableId: string) => void;      
+  setTableNumber: (number: string) => void;   
+  logout: () => void;                         
+  clearAuth: () => void;                      
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+
       token: null,
       guest: null,
       employee: null,
       restaurantId: null,
       sessionId: null,
+      tableId: null,     
+      tableNumber: null,  
 
+  
       setGuestAuth: (token, guest, restaurantId, sessionId) => {
         set({
           token,
@@ -62,6 +74,24 @@ export const useAuthStore = create<AuthState>()(
 
       setSessionId: (sessionId) => set({ sessionId }),
 
+      setTableId: (tableId) => set({ tableId }), 
+
+      setTableNumber: (tableNumber) => set({ tableNumber }), 
+
+      logout: () => {
+        set({
+          token: null,
+          guest: null,
+          employee: null,
+          restaurantId: null,
+          sessionId: null,
+          tableId: null, 
+          tableNumber: null,
+        });
+        deleteCookie();
+      },
+
+      
       clearAuth: () => {
         set({
           token: null,
@@ -69,6 +99,8 @@ export const useAuthStore = create<AuthState>()(
           employee: null,
           restaurantId: null,
           sessionId: null,
+          tableId: null,      
+          tableNumber: null,  
         });
         deleteCookie();
       },

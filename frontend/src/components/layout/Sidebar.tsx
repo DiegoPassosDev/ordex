@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LucideIcon, Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 
 interface NavItem {
   href: string;
@@ -92,6 +93,10 @@ export function Sidebar({ items }: SidebarProps) {
             </div>
 
             <nav className="flex flex-col gap-2">{renderNavItems(true)}</nav>
+
+            <div className="mt-auto pt-4">
+              <ThemeToggle />
+            </div>
           </aside>
         </div>
       )}
@@ -104,6 +109,10 @@ export function Sidebar({ items }: SidebarProps) {
         <nav className="flex w-full flex-1 flex-col items-center gap-4 px-2">
           {renderNavItems()}
         </nav>
+
+        <div className="mt-auto px-2">
+          <ThemeToggle />
+        </div>
       </aside>
     </>
   );

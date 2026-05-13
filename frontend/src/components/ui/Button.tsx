@@ -9,16 +9,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantMap = {
-  primary:   "bg-orange-500 hover:bg-orange-600 text-white shadow-sm",
-  secondary: "bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 shadow-sm",
-  danger:    "bg-red-500 hover:bg-red-600 text-white shadow-sm",
-  ghost:     "hover:bg-gray-700 text-gray-400 hover:text-gray-200",
+  primary: "bg-orange-500 hover:bg-orange-600 text-white shadow-sm",
+  secondary:
+    "bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 shadow-sm",
+  danger: "bg-red-500 hover:bg-red-600 text-white shadow-sm",
+  ghost: "hover:bg-gray-700 text-gray-400 hover:text-gray-200",
 };
 
 const sizeMap = {
-  sm: "px-3 py-1.5 text-xs",
-  md: "px-4 py-2.5 text-sm",
-  lg: "px-6 py-3 text-base",
+  sm: "h-8 px-3 text-xs",
+  md: "h-10 px-4 text-sm",
+  lg: "h-12 px-6 text-base",
 };
 
 export function Button({
@@ -34,7 +35,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-2 rounded-xl font-medium leading-none transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed",
         variantMap[variant],
         sizeMap[size],
         className,
@@ -47,7 +48,7 @@ export function Button({
       ) : Icon ? (
         <Icon className="w-4 h-4 shrink-0" />
       ) : null}
-      <span>{children}</span>
+      <span className="inline-flex items-center leading-none">{children}</span>
     </button>
   );
 }

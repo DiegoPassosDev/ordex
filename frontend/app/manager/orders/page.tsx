@@ -1,56 +1,68 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { useAuthStore } from '@/store/auth.store';
-import { ordersService } from '@/services/orders.service';
-import { useSocket } from '@/hooks/useSocket';
-import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { useState, useEffect } from "react";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { useAuthStore } from "@/store/auth.store";
+import { ordersService } from "@/services/orders.service";
+import { useSocket } from "@/hooks/useSocket";
+import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
-  LayoutGrid, ClipboardList, Users, UtensilsCrossed,
-  TrendingUp, Settings, ChefHat, Package, Loader2, Bell, LogOut,
-} from 'lucide-react';
-import { Order, OrderStatus, ORDER_STATUS_LABEL } from '@/types';
-import { useRouter } from 'next/navigation';
-import toast, { Toaster } from 'react-hot-toast';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+  LayoutGrid,
+  ClipboardList,
+  Users,
+  UtensilsCrossed,
+  TrendingUp,
+  Settings,
+  ChefHat,
+  Package,
+  Loader2,
+  Bell,
+  LogOut,
+} from "lucide-react";
+import { Order, OrderStatus, ORDER_STATUS_LABEL } from "@/types";
+import { useRouter } from "next/navigation";
+import toast, { Toaster } from "react-hot-toast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const navItems = [
-  { href: '/manager', icon: LayoutGrid, label: 'Dashboard' },
-  { href: '/manager/tables', icon: UtensilsCrossed, label: 'Mesas' },
-  { href: '/manager/orders', icon: ClipboardList, label: 'Pedidos' },
-  { href: '/manager/menu', icon: ChefHat, label: 'Cardápio' },
-  { href: '/manager/employees', icon: Users, label: 'Equipe' },
-  { href: '/manager/stock', icon: Package, label: 'Estoque' },
-  { href: '/manager/reports', icon: TrendingUp, label: 'Relatórios' },
-  { href: '/manager/settings', icon: Settings, label: 'Configurações' },
+  { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
+  { href: "/manager/tables", icon: UtensilsCrossed, label: "Mesas" },
+  { href: "/manager/orders", icon: ClipboardList, label: "Pedidos" },
+  { href: "/manager/menu", icon: ChefHat, label: "Cardápio" },
+  { href: "/manager/employees", icon: Users, label: "Equipe" },
+  { href: "/manager/stock", icon: Package, label: "Estoque" },
+  { href: "/manager/reports", icon: TrendingUp, label: "Relatórios" },
+  { href: "/manager/settings", icon: Settings, label: "Configurações" },
 ];
 
-const STATUS_FILTERS: { label: string; value: OrderStatus | 'ALL' }[] = [
-  { label: 'Todos', value: 'ALL' },
-  { label: 'Aguardando', value: 'WAITING' },
-  { label: 'Em preparo', value: 'PREPARING' },
-  { label: 'Pronto', value: 'READY' },
-  { label: 'A caminho', value: 'ON_THE_WAY' },
-  { label: 'Entregue', value: 'DELIVERED' },
-  { label: 'Cancelado', value: 'CANCELLED' },
+const STATUS_FILTERS: { label: string; value: OrderStatus | "ALL" }[] = [
+  { label: "Todos", value: "ALL" },
+  { label: "Aguardando", value: "WAITING" },
+  { label: "Em preparo", value: "PREPARING" },
+  { label: "Pronto", value: "READY" },
+  { label: "A caminho", value: "ON_THE_WAY" },
+  { label: "Entregue", value: "DELIVERED" },
+  { label: "Cancelado", value: "CANCELLED" },
 ];
 
 export default function OrdersPage() {
-  useRequireAuth('MANAGER');
+  useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
-  const restaurantId = employee?.restaurantId || 'f4385ae5-6187-40f8-97b4-d289d47dc441';
+  const restaurantId =
+    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filter, setFilter] = useState<OrderStatus | 'ALL'>('ALL');
+  const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   useSocket(
-    { type: 'restaurant', id: restaurantId },
+    { type: "restaurant", id: restaurantId },
     {
       new_order: () => loadOrders(),
       order_status_updated: () => loadOrders(),
@@ -63,20 +75,20 @@ export default function OrdersPage() {
       const data = await ordersService.getByRestaurant(restaurantId);
       setOrders(data);
     } catch {
-      toast.error('Erro ao carregar pedidos.');
+      toast.error("Erro ao carregar pedidos.");
     } finally {
       setLoading(false);
     }
   }
 
   async function handleCancel(orderId: string) {
-    if (!confirm('Deseja cancelar este pedido?')) return;
+    if (!confirm("Deseja cancelar este pedido?")) return;
     try {
       await ordersService.cancel(orderId);
-      toast.success('Pedido cancelado.');
+      toast.success("Pedido cancelado.");
       loadOrders();
     } catch {
-      toast.error('Erro ao cancelar pedido.');
+      toast.error("Erro ao cancelar pedido.");
     }
   }
 
@@ -85,31 +97,31 @@ export default function OrdersPage() {
     return `${minutes}m`;
   }
 
-  const filtered = filter === 'ALL' ? orders : orders.filter((o) => o.status === filter);
+  const filtered =
+    filter === "ALL" ? orders : orders.filter((o) => o.status === filter);
 
   const counts: Record<string, number> = {
     ALL: orders.length,
-    WAITING: orders.filter((o) => o.status === 'WAITING').length,
-    PREPARING: orders.filter((o) => o.status === 'PREPARING').length,
-    READY: orders.filter((o) => o.status === 'READY').length,
-    ON_THE_WAY: orders.filter((o) => o.status === 'ON_THE_WAY').length,
-    DELIVERED: orders.filter((o) => o.status === 'DELIVERED').length,
-    CANCELLED: orders.filter((o) => o.status === 'CANCELLED').length,
+    WAITING: orders.filter((o) => o.status === "WAITING").length,
+    PREPARING: orders.filter((o) => o.status === "PREPARING").length,
+    READY: orders.filter((o) => o.status === "READY").length,
+    ON_THE_WAY: orders.filter((o) => o.status === "ON_THE_WAY").length,
+    DELIVERED: orders.filter((o) => o.status === "DELIVERED").length,
+    CANCELLED: orders.filter((o) => o.status === "CANCELLED").length,
   };
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
         <div className="w-full px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
-
           {/* Header */}
           <div className="flex items-center justify-between mb-6 gap-3">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-white">
-                Olá, {employee?.name?.split(' ')[0] || 'Gestor'}!
+                Olá, {employee?.name?.split(" ")[0] || "Gestor"}!
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
                 Acompanhe todos os pedidos em tempo real
@@ -122,11 +134,19 @@ export default function OrdersPage() {
               </button>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-500 flex items-center justify-center">
                 <span className="text-white font-semibold text-xs sm:text-sm">
-                  {employee?.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'DG'}
+                  {employee?.name
+                    ?.split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase() || "DG"}
                 </span>
               </div>
               <button
-                onClick={() => { clearAuth(); router.push('/login'); }}
+                onClick={() => {
+                  clearAuth();
+                  router.push("/login");
+                }}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
               >
                 <LogOut className="w-4 h-4" />
@@ -142,14 +162,16 @@ export default function OrdersPage() {
                 onClick={() => setFilter(f.value)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all border whitespace-nowrap shrink-0 ${
                   filter === f.value
-                    ? 'bg-orange-500 text-white border-orange-500'
-                    : 'bg-gray-800 text-gray-400 border-gray-700'
+                    ? "bg-orange-500 text-white border-orange-500"
+                    : "bg-gray-800 text-gray-400 border-gray-700"
                 }`}
               >
                 {f.label}
-                <span className={`px-1.5 py-0.5 rounded-full text-xs ${
-                  filter === f.value ? 'bg-white/20' : 'bg-gray-700'
-                }`}>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-xs ${
+                    filter === f.value ? "bg-white/20" : "bg-gray-700"
+                  }`}
+                >
                   {counts[f.value] ?? 0}
                 </span>
               </button>
@@ -166,15 +188,21 @@ export default function OrdersPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm sm:text-base">
-                  {filter === 'ALL' ? 'Todos os Pedidos' : ORDER_STATUS_LABEL[filter as OrderStatus]}
+                  {filter === "ALL"
+                    ? "Todos os Pedidos"
+                    : ORDER_STATUS_LABEL[filter as OrderStatus]}
                 </CardTitle>
-                <span className="text-xs text-gray-400">{filtered.length} pedidos</span>
+                <span className="text-xs text-gray-400">
+                  {filtered.length} pedidos
+                </span>
               </CardHeader>
 
               {filtered.length === 0 && (
                 <div className="text-center py-12">
                   <ClipboardList className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">Nenhum pedido encontrado</p>
+                  <p className="text-gray-500 text-sm">
+                    Nenhum pedido encontrado
+                  </p>
                 </div>
               )}
 
@@ -189,11 +217,11 @@ export default function OrdersPage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
                           <span className="text-orange-400 text-xs font-bold">
-                            {order.session?.table?.number ?? '?'}
+                            {order.session?.table?.number ?? "?"}
                           </span>
                         </div>
                         <p className="text-sm font-semibold text-gray-100 shrink-0">
-                          Mesa {order.session?.table?.number ?? '?'}
+                          Mesa {order.session?.table?.number ?? "?"}
                         </p>
                         <StatusBadge status={order.status} />
                       </div>
@@ -210,7 +238,10 @@ export default function OrdersPage() {
                         <p key={i} className="text-xs text-gray-400">
                           {item.quantity}x {item.menuItem?.name}
                           {item.notes && (
-                            <span className="text-gray-500 italic"> — {item.notes}</span>
+                            <span className="text-gray-500 italic">
+                              {" "}
+                              — {item.notes}
+                            </span>
                           )}
                         </p>
                       ))}
@@ -219,16 +250,17 @@ export default function OrdersPage() {
                     {/* Linha inferior — garçom + cancelar */}
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-gray-500">
-                        {order.session?.waiter?.name || 'Sem garçom'}
+                        {order.session?.waiter?.name || "Sem garçom"}
                       </p>
-                      {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-                        <button
-                          onClick={() => handleCancel(order.id)}
-                          className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs"
-                        >
-                          Cancelar
-                        </button>
-                      )}
+                      {order.status !== "CANCELLED" &&
+                        order.status !== "DELIVERED" && (
+                          <button
+                            onClick={() => handleCancel(order.id)}
+                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs"
+                          >
+                            Cancelar
+                          </button>
+                        )}
                     </div>
                   </div>
                 ))}

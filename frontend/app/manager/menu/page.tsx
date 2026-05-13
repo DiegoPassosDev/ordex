@@ -7,6 +7,7 @@ import { menuService } from "@/services/menu.service";
 import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { SearchInput } from "@/components/ui/SearchInput";
 import {
   LayoutGrid,
   ClipboardList,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import { Category } from "@/types";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const navItems = [
@@ -58,6 +59,7 @@ export default function MenuPage() {
   const [savingItem, setSavingItem] = useState(false);
   const [savingCat, setSavingCat] = useState(false);
   const [savingEditItem, setSavingEditItem] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [itemForm, setItemForm] = useState({
     name: "",
@@ -173,7 +175,7 @@ export default function MenuPage() {
     }
     setSavingEditItem(true);
     try {
-      await api.put(`/menu/items/${editingItem.id}`, {
+      await api.patch(`/menu/items/${editingItem.id}`, {
         name: editingItem.name,
         description: editingItem.description || undefined,
         price: parseFloat(editingItem.price),
@@ -198,7 +200,8 @@ export default function MenuPage() {
       toast.success("Disponibilidade atualizada!");
       loadMenu();
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Erro ao atualizar disponibilidade.";
+      const msg =
+        err?.response?.data?.message || "Erro ao atualizar disponibilidade.";
       toast.error(Array.isArray(msg) ? msg[0] : msg);
     }
   }
@@ -209,9 +212,24 @@ export default function MenuPage() {
     0,
   );
 
+  const filteredCategories = searchQuery
+    ? categories
+        .map((cat) => ({
+          ...cat,
+          items: cat.items.filter(
+            (item) =>
+              item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.description
+                ?.toLowerCase()
+                .includes(searchQuery.toLowerCase()),
+          ),
+        }))
+        .filter((cat) => cat.items.length > 0)
+    : categories;
+
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <CustomToaster />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
@@ -253,17 +271,17 @@ export default function MenuPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
+            <Button icon={Plus} onClick={() => setShowItemModal(true)}>
+              Novo Item
+            </Button>
             <Button
               variant="secondary"
               icon={Plus}
               onClick={() => setShowCatModal(true)}
-              className="w-full sm:w-40 bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+              className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
             >
               Nova Categoria
-            </Button>
-            <Button icon={Plus} onClick={() => setShowItemModal(true)} className="w-full sm:w-40">
-              Novo Item
-            </Button>
+            </Button>            
           </div>
 
           {/* Resumo */}
@@ -272,11 +290,17 @@ export default function MenuPage() {
               <p className="text-2xl sm:text-3xl font-bold text-white">
                 {categories.length}
               </p>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1">Categorias</p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                Categorias
+              </p>
             </div>
             <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 sm:p-5">
-              <p className="text-2xl sm:text-3xl font-bold text-green-400">{totalItems}</p>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1">Itens cadastrados</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-400">
+                {totalItems}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                Itens cadastrados
+              </p>
             </div>
             <div className="bg-gray-800 rounded-2xl border border-gray-700 p-4 sm:p-5">
               <p className="text-2xl sm:text-3xl font-bold text-red-400">
@@ -286,6 +310,14 @@ export default function MenuPage() {
             </div>
           </div>
 
+          <div className="mb-6 max-w">
+            <SearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar pratos ou descrições"
+            />
+          </div>
+
           {loading && (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -293,8 +325,15 @@ export default function MenuPage() {
           )}
 
           {/* Categorias e Itens */}
+          {!loading && filteredCategories.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <p className="text-sm">
+                Nenhum item encontrado para "{searchQuery}"
+              </p>
+            </div>
+          )}
           {!loading &&
-            categories.map((cat) => (
+            filteredCategories.map((cat) => (
               <Card key={cat.id} className="mb-6">
                 <CardHeader>
                   <div className="flex items-center gap-2">
@@ -331,7 +370,7 @@ export default function MenuPage() {
                               {item.name}
                             </p>
                             {!item.available && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
+                              <span className="text-xs px-2 py-0 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 leading-tight">
                                 Indisponível
                               </span>
                             )}
@@ -477,14 +516,7 @@ export default function MenuPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-2">
-                <Button
-                  variant="secondary"
-                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
-                  onClick={() => setShowItemModal(false)}
-                >
-                  Cancelar
-                </Button>
+              <div className="flex justify-center gap-3 mt-2">
                 <Button
                   className="flex-1"
                   icon={Plus}
@@ -492,6 +524,13 @@ export default function MenuPage() {
                   onClick={handleAddItem}
                 >
                   Criar Item
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
+                  onClick={() => setShowItemModal(false)}
+                >
+                  Cancelar
                 </Button>
               </div>
             </div>
@@ -543,7 +582,7 @@ export default function MenuPage() {
                   <option value="DESSERT">Sobremesa</option>
                 </select>
               </div>
-              <div className="flex gap-3 mt-2">
+              <div className="flex justify-center gap-3 mt-2">
                 <Button
                   variant="secondary"
                   className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
@@ -587,7 +626,10 @@ export default function MenuPage() {
                 <select
                   value={editingItem.categoryId}
                   onChange={(e) =>
-                    setEditingItem({ ...editingItem, categoryId: e.target.value })
+                    setEditingItem({
+                      ...editingItem,
+                      categoryId: e.target.value,
+                    })
                   }
                   className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
                 >
@@ -618,7 +660,10 @@ export default function MenuPage() {
                 <input
                   value={editingItem.description}
                   onChange={(e) =>
-                    setEditingItem({ ...editingItem, description: e.target.value })
+                    setEditingItem({
+                      ...editingItem,
+                      description: e.target.value,
+                    })
                   }
                   className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
                 />
@@ -646,26 +691,29 @@ export default function MenuPage() {
                     type="number"
                     value={editingItem.prepTimeMin}
                     onChange={(e) =>
-                      setEditingItem({ ...editingItem, prepTimeMin: e.target.value })
+                      setEditingItem({
+                        ...editingItem,
+                        prepTimeMin: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 rounded-xl bg-gray-700 border border-gray-600 text-white text-sm focus:outline-none focus:border-orange-500"
                   />
                 </div>
               </div>
-              <div className="flex gap-3 mt-2">
-                <Button
-                  variant="secondary"
-                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
-                  onClick={() => setShowEditModal(false)}
-                >
-                  Cancelar
-                </Button>
+              <div className="flex justify-center gap-3 mt-2">
                 <Button
                   className="flex-1"
                   loading={savingEditItem}
                   onClick={handleSaveEditItem}
                 >
                   Salvar
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancelar
                 </Button>
               </div>
             </div>

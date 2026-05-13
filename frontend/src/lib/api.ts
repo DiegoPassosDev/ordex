@@ -1,16 +1,12 @@
 import axios from "axios";
+import { useAuthStore } from "@/store/auth.store";
 
 function getApiBaseUrl() {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-
-  if (typeof window !== "undefined") {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:3001`;
-  }
-
-  return "http://localhost:3001";
+  
+  return "/api";
 }
 
 export const api = axios.create({
@@ -18,8 +14,9 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("ordex_token") : null;
+  // Get token from Zustand store
+  const authState = useAuthStore.getState();
+  const token = authState.token;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });

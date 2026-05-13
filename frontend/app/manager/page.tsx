@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -31,6 +31,8 @@ import {
 import {
   TableSession,
   Order,
+  Employee,
+  Guest,
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
 } from "@/types";
@@ -72,6 +74,10 @@ const tableStatusConfig = {
   },
 };
 
+type DashboardSession = TableSession & {
+  guests?: Guest[];
+};
+
 export default function ManagerDashboard() {
   useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
@@ -79,57 +85,62 @@ export default function ManagerDashboard() {
   const restaurantId =
     employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
-  const [sessions, setSessions] = useState<TableSession[]>([]);
+  const [sessions, setSessions] = useState<DashboardSession[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSession, setSelectedSession] = useState<TableSession | null>(
-    null,
-  );
+  const [selectedSession, setSelectedSession] =
+    useState<DashboardSession | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+
+  const loadData = useCallback(
+    async (showSpinner = true) => {
+      try {
+        if (showSpinner) setLoading(true);
+        const [sessionsResponse, ordersResponse] = await Promise.all([
+          sessionsService.getActiveByRestaurant(restaurantId),
+          ordersService.getByRestaurant(restaurantId),
+        ]);
+        const sessionsData = sessionsResponse as DashboardSession[];
+        const ordersData = ordersResponse as Order[];
+        setSessions(sessionsData);
+        setRecentOrders(ordersData.slice(0, 8));
+        const waiters = sessionsData
+          .map((s) => s.waiter)
+          .filter((waiter): waiter is Employee => Boolean(waiter))
+          .filter(
+            (waiter, index, arr) =>
+              arr.findIndex((item) => item.id === waiter.id) === index,
+          );
+        setEmployees(waiters);
+        setSelectedSession((current) => {
+          if (!current) return current;
+          return (
+            sessionsData.find((session) => session.id === current.id) ?? null
+          );
+        });
+      } catch (err) {
+        console.error("Erro ao carregar dados:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [restaurantId],
+  );
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   useSocket(
     { type: "restaurant", id: restaurantId },
     {
-      new_order: () => loadData(),
-      order_status_updated: () => loadData(),
-      bill_requested: () => loadData(),
+      table_session_updated: () => loadData(false),
+      new_order: () => loadData(false),
+      order_status_updated: () => loadData(false),
+      bill_requested: () => loadData(false),
     },
   );
-
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [sessionsData, ordersData] = await Promise.all([
-        sessionsService.getActiveByRestaurant(restaurantId),
-        ordersService.getByRestaurant(restaurantId),
-      ]);
-      setSessions(sessionsData);
-      setRecentOrders(ordersData.slice(0, 8));
-      const waiters = sessionsData
-        .filter((s: TableSession) => s.waiter)
-        .map((s: TableSession) => s.waiter)
-        .filter(
-          (w: any, i: number, arr: any[]) =>
-            arr.findIndex((x) => x?.id === w?.id) === i,
-        );
-      setEmployees(waiters);
-      if (selectedSession) {
-        const updated = sessionsData.find(
-          (s: TableSession) => s.id === selectedSession.id,
-        );
-        if (updated) setSelectedSession(updated);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar dados:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleCancelOrder(orderId: string) {
     if (!confirm("Deseja cancelar este pedido?")) return;
@@ -178,6 +189,14 @@ export default function ManagerDashboard() {
     const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
     if (minutes < 60) return `${minutes} min`;
     return `${Math.floor(minutes / 60)}h ${minutes % 60}min`;
+  }
+
+  function getGuestName(session: DashboardSession | null): string | null {
+    const guest = session?.guests?.[0];
+
+    if (!guest) return null;
+
+    return guest.name?.trim() || guest.email || null;
   }
 
   const openSessions = sessions.filter((s) => s.status !== "CLOSED");
@@ -318,6 +337,13 @@ export default function ManagerDashboard() {
                         <p className={`text-xs font-medium ${config.text}`}>
                           {config.label}
                         </p>
+                        {/* Nome do cliente — só exibe quando a mesa está ocupada */}
+                        {session.guests && session.guests.length > 0 && (
+                          <p className="text-xs font-medium text-gray-200 truncate">
+                            {session.guests[0].name?.split(" ")[0] ??
+                              session.guests[0].email}
+                          </p>
+                        )}
                         <p className="text-xs text-gray-400 mt-1 truncate">
                           {session.waiter?.name || "Sem garçom"}
                         </p>
@@ -418,7 +444,16 @@ export default function ManagerDashboard() {
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-700">
+            <div className="grid grid-cols-4 gap-2 p-4 border-b border-gray-700">
+              <div className="bg-gray-700/50 rounded-xl p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Users className="w-3.5 h-3.5 text-orange-400" />
+                  <p className="text-xs text-gray-400">Cliente</p>
+                </div>
+                <p className="text-sm font-semibold text-white truncate">
+                  {getGuestName(selectedSession)?.split(" ")[0] || "—"}
+                </p>
+              </div>
               <div className="bg-gray-700/50 rounded-xl p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <UserCheck className="w-3.5 h-3.5 text-blue-400" />

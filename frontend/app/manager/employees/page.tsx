@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Employee } from "@/types";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const navItems = [
@@ -42,6 +42,7 @@ const ROLE_LABEL: Record<string, string> = {
   WAITER: "Garçom",
   KITCHEN: "Cozinha",
   BAR: "Bar",
+  CASHIER: "Caixa",
 };
 
 const ROLE_COLOR: Record<string, string> = {
@@ -49,10 +50,11 @@ const ROLE_COLOR: Record<string, string> = {
   WAITER: "bg-blue-500/20 text-blue-400 border-blue-500/30",
   KITCHEN: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   BAR: "bg-green-500/20 text-green-400 border-green-500/30",
+  CASHIER: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
 export default function EmployeesPage() {
-  useRequireAuth('MANAGER');
+  useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
   const restaurantId =
@@ -99,7 +101,7 @@ export default function EmployeesPage() {
     setSaving(true);
     try {
       await api.post("/employees", { ...form, restaurantId });
-      toast.success("Funcionário cadastrado!");
+      toast.success("Funcionário cadastrado com sucesso!");
       setShowModal(false);
       setForm({ name: "", email: "", password: "", pin: "", role: "WAITER" });
       loadEmployees();
@@ -129,11 +131,12 @@ export default function EmployeesPage() {
     WAITER: employees.filter((e) => e.role === "WAITER").length,
     KITCHEN: employees.filter((e) => e.role === "KITCHEN").length,
     BAR: employees.filter((e) => e.role === "BAR").length,
+    CASHIER: employees.filter((e) => e.role === "CASHIER").length,
   };
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <CustomToaster />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
@@ -175,20 +178,28 @@ export default function EmployeesPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mb-6">
-            <Button icon={Plus} onClick={() => setShowModal(true)} className="w-full sm:w-auto">
+            <Button
+              icon={Plus}
+              onClick={() => setShowModal(true)}
+              className="w-full sm:w-auto"
+            >
               Novo Funcionário
             </Button>
           </div>
 
           {/* Resumo */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="grid grid-cols-5 gap-2 mb-6 sm:mb-8">
             {Object.entries(byRole).map(([role, count]) => (
               <div
                 key={role}
-                className="bg-gray-800 rounded-2xl border border-gray-700 p-4 sm:p-5"
+                className="bg-gray-800 rounded-lg border border-gray-700 p-2.5 sm:p-3"
               >
-                <p className="text-2xl sm:text-3xl font-bold text-white">{count}</p>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1">{ROLE_LABEL[role]}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">
+                  {count}
+                </p>
+                <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+                  {ROLE_LABEL[role]}
+                </p>
               </div>
             ))}
           </div>
@@ -359,17 +370,11 @@ export default function EmployeesPage() {
                   <option value="WAITER">Garçom</option>
                   <option value="KITCHEN">Cozinha</option>
                   <option value="BAR">Bar</option>
+                  <option value="CASHIER">Caixa</option>
                   <option value="MANAGER">Gestor</option>
                 </select>
               </div>
-              <div className="flex gap-3 mt-2">
-                <Button
-                  variant="secondary"
-                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
-                  onClick={() => setShowModal(false)}
-                >
-                  Cancelar
-                </Button>
+              <div className="flex justify-center gap-3 mt-2">
                 <Button
                   className="flex-1"
                   icon={Plus}
@@ -377,6 +382,13 @@ export default function EmployeesPage() {
                   onClick={handleAdd}
                 >
                   Cadastrar
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1 bg-gray-700 border-gray-600 text-gray-300"
+                  onClick={() => setShowModal(false)}
+                >
+                  Cancelar
                 </Button>
               </div>
             </div>

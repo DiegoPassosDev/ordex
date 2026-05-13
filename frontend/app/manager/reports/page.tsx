@@ -36,7 +36,7 @@ const navItems = [
 ];
 
 export default function ReportsPage() {
-  useRequireAuth('MANAGER');
+  useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
   const restaurantId =
@@ -99,7 +99,7 @@ export default function ReportsPage() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       <Sidebar items={navItems} />
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
