@@ -7,6 +7,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   WAITER: ["/waiter"],
   KITCHEN: ["/kitchen"],
   BAR: ["/kitchen"],
+  CASHIER: ["/cashier"],
 };
 
 export function proxy(request: NextRequest) {
@@ -30,6 +31,7 @@ export function proxy(request: NextRequest) {
     const state = auth?.state;
     const token = state?.token;
     const employee = state?.employee;
+    const guest = state?.guest;
 
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));
@@ -53,6 +55,11 @@ export function proxy(request: NextRequest) {
         const defaultRoute = allowedPrefixes[0] || "/login";
         return NextResponse.redirect(new URL(defaultRoute, request.url));
       }
+    }
+
+    // Verifica se é rota de cliente e se há guest autenticado
+    if (pathname.startsWith("/table") && !guest) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
     return NextResponse.next();

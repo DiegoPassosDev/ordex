@@ -2,11 +2,18 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 
-type RequiredRole = "MANAGER" | "WAITER" | "KITCHEN" | "BAR" | "guest";
+type RequiredRole =
+  | "MANAGER"
+  | "WAITER"
+  | "KITCHEN"
+  | "BAR"
+  | "GUEST"
+  | "CASHIER";
 
 export function useRequireAuth(role: RequiredRole) {
   const { token, employee } = useAuthStore();
   const router = useRouter();
+  const normalizedRole = role.toUpperCase() as RequiredRole;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -26,12 +33,15 @@ export function useRequireAuth(role: RequiredRole) {
       return;
     }
 
-    if (role === "guest" && employee) {
+    if (normalizedRole === "GUEST" && employee) {
       router.replace("/login");
       return;
     }
 
-    if (role !== "guest" && (!employee || employee.role !== role)) {
+    if (
+      normalizedRole !== "GUEST" &&
+      (!employee || employee.role !== normalizedRole)
+    ) {
       router.replace("/login");
       return;
     }
