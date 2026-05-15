@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuthStore } from "@/store/auth.store";
 import { ordersService } from "@/services/orders.service";
-import { sessionsService } from "@/services/sessions.service";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   LayoutGrid,
@@ -23,6 +22,7 @@ import { Order } from "@/types";
 import { useRouter } from "next/navigation";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { Header } from "@/components/layout/Header";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -105,41 +105,11 @@ export default function ReportsPage() {
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
         <div className="w-full px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6 gap-3">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
-                Olá, {employee?.name?.split(" ")[0] || "Gestor"}!
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-                Relatórios e análises do restaurante
-              </p>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <button className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:bg-gray-700 transition-all">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 bg-orange-500 rounded-full" />
-              </button>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-orange-500 flex items-center justify-center">
-                <span className="text-white font-semibold text-xs sm:text-sm">
-                  {employee?.name
-                    ?.split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase() || "DG"}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  clearAuth();
-                  router.push("/login");
-                }}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <Header
+            title="Relatórios"
+            subtitle="Análises e estatísticas do restaurante"
+            restaurantId={restaurantId}
+          />
 
           {loading && (
             <div className="flex items-center justify-center py-20">

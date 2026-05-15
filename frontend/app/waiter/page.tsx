@@ -19,6 +19,8 @@ import {
 import { TableSession } from "@/types";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useNotifications } from "@/hooks/useNotifications";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 
 type Tab = "tables" | "alerts";
 
@@ -59,6 +61,17 @@ export default function WaiterPage() {
   const [tab, setTab] = useState<Tab>("tables");
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const {
+    notifications,
+    unreadCount,
+    soundEnabled,
+    toggleSound,
+    addNotification,
+    markAllRead,
+    markRead,
+    clearAll,
+    typeConfig,
+  } = useNotifications();
 
   useEffect(() => {
     setMounted(true);
@@ -68,33 +81,48 @@ export default function WaiterPage() {
   useSocket(
     { type: "restaurant", id: restaurantId },
     {
+      table_session_updated: () => {
+        loadSessions();
+      },
       new_order: () => {
         loadSessions();
-        toast.success("Novo pedido recebido!");
-        try {
-          new Audio("/sounds/new-order.mp3").play();
-        } catch {}
+        addNotification(
+          "new_order",
+          "Novo Pedido",
+          "Novo pedido recebido!",
+        );
+        toast.success("Novo pedido recebido!");        
       },
       order_status_updated: (order: any) => {
         if (order.status === "READY") {
+          addNotification(
+            "order_ready",
+            "Pedido Pronto",
+            `Mesa ${order.session?.table?.number} — pronto para entregar`,
+            order.session?.table?.number,
+          );
           toast.success(
             `Pedido pronto — Mesa ${order.session?.table?.number}!`,
           );
-          try {
-            new Audio("/sounds/order-ready.mp3").play();
-          } catch {}
         }
         loadSessions();
       },
-      waiter_called: (data: {
-        sessionId: string;
-        tableNumber: number;
-        reason: string;
-      }) => {
+      waiter_called: (data: any) => {
+        addNotification(
+          "waiter_called",
+          "Garçom Chamado",
+          `Mesa ${data.tableNumber}: ${data.reason}`,
+          data.tableNumber,
+        );
         toast(`Mesa ${data.tableNumber}: ${data.reason}`, { icon: "🔔" });
         loadSessions();
       },
       bill_requested: () => {
+        addNotification(
+          "bill_requested",
+          "Conta Solicitada",
+          "Cliente pedindo a conta!",
+        );
         toast("Cliente pedindo a conta!", { icon: "💳" });
         loadSessions();
       },
@@ -119,6 +147,9 @@ export default function WaiterPage() {
       await sessionsService.assignWaiter(sessionId, employee.id);
       toast.success("Mesa aceita!");
       loadSessions();
+      // Atualiza o selectedSession para refletir o novo garçom imediatamente
+      const updated = await sessionsService.getOne(sessionId);
+      setSelectedSession(updated);
     } catch {
       toast.error("Erro ao aceitar mesa.");
     }
@@ -348,12 +379,16 @@ export default function WaiterPage() {
               </p>
             </div>
           </div>
-          {alerts > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
-              <Bell className="w-3.5 h-3.5" />
-              {alerts} alerta{alerts > 1 ? "s" : ""}
-            </div>
-          )}
+          <NotificationBell
+            notifications={notifications}
+            unreadCount={unreadCount}
+            soundEnabled={soundEnabled}
+            onToggleSound={toggleSound}
+            onMarkRead={markRead}
+            onMarkAllRead={markAllRead}
+            onClearAll={clearAll}
+            typeConfig={typeConfig}
+          />
         </div>
 
         <div className="flex gap-1 mt-3 bg-gray-700/50 rounded-xl p-1">

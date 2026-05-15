@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { Header } from "@/components/layout/Header";
 
 export default function StockReportsPage() {
   useRequireAuth("MANAGER");
@@ -54,49 +55,25 @@ export default function StockReportsPage() {
 
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
         <div className="w-full px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/manager/stock"
-                className="w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-all"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white">
-                  Análise de Lucro
-                </h1>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Custo e margem por produto
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="relative w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
-              </button>
-              <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center">
-                <span className="text-white font-semibold text-xs">
-                  {employee?.name
-                    ?.split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase() || "DG"}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  clearAuth();
-                  router.push("/login");
-                }}
-                className="w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:text-red-400 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+          <div className="flex items-start gap-4 mb-1">
+            {/* Seta */}
+            <Link
+              href="/manager/stock"
+              className="w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-all shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+
+            {/* Header ocupa toda largura restante */}
+            <div className="flex-1 min-w-0">
+              <Header
+                title="Análise de Lucro"
+                subtitle="Custo e margem por produto"
+                restaurantId={restaurantId}
+              />
             </div>
           </div>
+          
 
           {loading ? (
             <div className="flex items-center justify-center py-20">

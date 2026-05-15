@@ -6,8 +6,9 @@ import { ordersService } from "@/services/orders.service";
 import { useSocket } from "@/hooks/useSocket";
 import { Order } from "@/types";
 import { ChefHat, Clock, CheckCheck, Flame, Loader2 } from "lucide-react";
-import toast, { Toaster } from "react-hot-toast";
+import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const RESTAURANT_ID = "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
@@ -18,6 +19,7 @@ function getElapsedMinutes(date: string) {
 function ElapsedTimer({ date }: { date: string }) {
   const [minutes, setMinutes] = useState(0);
   const [mounted, setMounted] = useState(false);
+  
 
   useEffect(() => {
     setMounted(true);
@@ -54,6 +56,7 @@ export default function KitchenPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     setMounted(true);
@@ -70,10 +73,13 @@ export default function KitchenPage() {
           if (exists) return prev;
           return [order, ...prev];
         });
+        addNotification(
+          "new_order",
+          "Novo Pedido para Preparo",
+          `Mesa ${order.session?.table?.number} enviou um novo pedido`,
+          order.session?.table?.number,
+        );
         toast.success(`Novo pedido — Mesa ${order.session?.table?.number}!`);
-        try {
-          new Audio("/sounds/new-order.mp3").play();
-        } catch {}
       },
       order_status_updated: (order: Order) => {
         setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
@@ -148,7 +154,7 @@ export default function KitchenPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
-      <Toaster position="top-center" />
+      <CustomToaster />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6 md:mb-8">

@@ -203,7 +203,7 @@ export default function CashierPage() {
         notes: notes || undefined,
         authorizedBy: method === "STORE_CREDIT" ? authPin : undefined,
       });
-      toast.success("Pagamento registrado! Mesa liberada. ✅");
+      toast.success("Pagamento registrado! Mesa liberada.");
       setSelectedSession(null);
       setBillData(null);
       loadAll();

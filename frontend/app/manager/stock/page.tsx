@@ -4,14 +4,12 @@ import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
-import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { managerNavItems } from "@/lib/stock-nav";
 import {
   Package,
   AlertTriangle,
   TrendingDown,
   DollarSign,
-  Bell,
   LogOut,
   Loader2,
   ChevronRight,
@@ -21,6 +19,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { Header } from "@/components/layout/Header";
 
 const UNIT_LABEL: Record<string, string> = {
   KG: "kg",
@@ -110,41 +109,12 @@ export default function StockDashboard() {
       <div className="flex-1 pl-0 md:pl-16 overflow-auto">
         <div className="w-full px-4 sm:px-6 xl:px-10 py-6 sm:py-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
-                Olá, {employee?.name?.split(" ")[0] || "Gestor"}!
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
-                Controle de Estoque
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="relative w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400">
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full" />
-              </button>
-              <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center">
-                <span className="text-white font-semibold text-xs">
-                  {employee?.name
-                    ?.split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase() || "DG"}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  clearAuth();
-                  router.push("/login");
-                }}
-                className="w-9 h-9 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400 hover:text-red-400 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <Header
+            title=""
+            subtitle="Controle de Estoque"
+            restaurantId={restaurantId}
+          />
+          
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
