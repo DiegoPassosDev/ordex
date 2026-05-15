@@ -82,12 +82,22 @@ export class OrdersService {
     });
   }
 
-  async findByRestaurant(restaurantId: string) {
+  async findByRestaurant(restaurantId: string, date?: string) {
+    const start = date ? new Date(date) : new Date();
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+
     return this.prisma.order.findMany({
-      where: { session: { restaurantId } },
+      where: {
+        session: { restaurantId },
+        createdAt: { gte: start, lte: end },
+      },
       include: {
         items: { include: { menuItem: true } },
-        session: { include: { table: true } },
+        session: { include: { table: true, waiter: true } },
+        statusHistory: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });

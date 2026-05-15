@@ -104,7 +104,7 @@ export default function ManagerDashboard() {
         const sessionsData = sessionsResponse as DashboardSession[];
         const ordersData = ordersResponse as Order[];
         setSessions(sessionsData);
-        setRecentOrders(ordersData.slice(0, 8));
+        setRecentOrders(ordersData);
         const waiters = sessionsData
           .map((s) => s.waiter)
           .filter((waiter): waiter is Employee => Boolean(waiter))
@@ -180,8 +180,30 @@ export default function ManagerDashboard() {
     );
   }
 
-  function getElapsedMinutes(date: string): string {
-    const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
+  function getOrderElapsed(order: Order): string {
+    const start = new Date(order.createdAt).getTime();
+
+    // Se finalizado, busca o timestamp do último status no histórico
+    const isFinal =
+      order.status === "DELIVERED" || order.status === "CANCELLED";
+    if (isFinal && order.statusHistory && order.statusHistory.length > 0) {
+      const lastEntry = [...order.statusHistory]
+        .filter((h) => h.status === order.status)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+
+      if (lastEntry) {
+        const minutes = Math.floor(
+          (new Date(lastEntry.createdAt).getTime() - start) / 60000,
+        );
+        return `${minutes} min ✓`;
+      }
+    }
+
+    // Ainda em andamento — tempo até agora
+    const minutes = Math.floor((Date.now() - start) / 60000);
     return `${minutes} min`;
   }
 
@@ -200,10 +222,14 @@ export default function ManagerDashboard() {
   }
 
   const openSessions = sessions.filter((s) => s.status !== "CLOSED");
-  const totalRevenue = openSessions.reduce(
-    (acc, s) => acc + getSessionTotal(s),
+
+  const totalRevenue = recentOrders
+  .filter((o) => o.status !== "CANCELLED")
+  .reduce(
+    (acc, o) => acc + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
     0,
   );
+
   const activeOrders = recentOrders.filter(
     (o) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
   );
@@ -342,7 +368,7 @@ export default function ManagerDashboard() {
                 )}
 
                 <div className="space-y-2">
-                  {recentOrders.map((order) => (
+                  {recentOrders.slice(0, 8).map((order) => (
                     <div
                       key={order.id}
                       className="flex items-start justify-between p-3 rounded-xl bg-gray-800 gap-2"
@@ -366,7 +392,7 @@ export default function ManagerDashboard() {
                       </div>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-xs text-gray-500">
-                          {getElapsedMinutes(order.createdAt)}
+                          {getOrderElapsed(order)}
                         </span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ORDER_STATUS_COLOR[order.status]}`}
@@ -488,7 +514,7 @@ export default function ManagerDashboard() {
                         <StatusBadge status={order.status} />
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-400">
-                            {getElapsedMinutes(order.createdAt)}
+                            {getOrderElapsed(order)}
                           </span>
                           <span className="text-sm font-bold text-white">
                             R${" "}

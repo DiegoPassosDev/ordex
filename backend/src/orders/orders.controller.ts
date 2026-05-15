@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -26,8 +27,11 @@ export class OrdersController {
   }
 
   @Get('restaurant/:restaurantId')
-  findByRestaurant(@Param('restaurantId') restaurantId: string) {
-    return this.ordersService.findByRestaurant(restaurantId);
+  findByRestaurant(
+    @Param('restaurantId') restaurantId: string,
+    @Query('date') date?: string,
+  ) {
+    return this.ordersService.findByRestaurant(restaurantId, date);
   }
 
   @Get(':id')
