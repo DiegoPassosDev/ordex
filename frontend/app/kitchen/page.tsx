@@ -9,6 +9,7 @@ import { ChefHat, Clock, CheckCheck, Flame, Loader2 } from "lucide-react";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useAuthStore } from "@/store/auth.store";
 
 const RESTAURANT_ID = "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
@@ -52,7 +53,8 @@ function ElapsedTimer({ date }: { date: string }) {
 }
 
 export default function KitchenPage() {
-  useRequireAuth("KITCHEN");
+  useRequireAuth(["KITCHEN", "BAR"]);
+  const employee = useAuthStore((s) => s.employee);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -164,7 +166,7 @@ export default function KitchenPage() {
           </div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-white">
-              Cozinha — Ordex
+              {employee?.role === "BAR" ? "Bar" : "Cozinha"} — Ordex
             </h1>
             <p className="text-gray-400 text-xs md:text-sm">
               Painel de pedidos em tempo real

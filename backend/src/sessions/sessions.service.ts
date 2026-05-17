@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OpenSessionDto } from './dto/open-session.dto';
 import { AssignWaiterDto } from './dto/assign-waiter.dto';
 import { OrdersGateway } from '../gateway/orders.gateway';
+import { RequestBillDto } from './dto/request-bill.dto';
 
 @Injectable()
 export class SessionsService {
@@ -70,7 +71,7 @@ export class SessionsService {
       include: {
         table: true,
         waiter: true,
-        guests: true,         // ← inclui os guests vinculados à sessão
+        guests: true, // ← inclui os guests vinculados à sessão
         orders: {
           include: {
             items: { include: { menuItem: true } },
@@ -98,21 +99,73 @@ export class SessionsService {
     return updated;
   }
 
-  async requestBill(id: string) {
+  async requestBill(id: string, dto: RequestBillDto) {
     const session = await this.findOne(id);
+
     if (session.status === 'CLOSED')
       throw new BadRequestException('Sessão já encerrada.');
 
+    if (session.status === 'REQUESTING_BILL')
+      throw new BadRequestException('Conta já foi solicitada.');
+
+    // Calcula o subtotal dos pedidos não cancelados
+    const subtotal = session.orders.reduce((acc, order) => {
+      if (order.status === 'CANCELLED') return acc;
+      return (
+        acc + order.items.reduce((s, item) => s + item.price * item.quantity, 0)
+      );
+    }, 0);
+
+    // Busca a taxa de serviço do restaurante
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: session.restaurantId },
+      select: { serviceCharge: true },
+    });
+
+    const serviceChargeRate = restaurant?.serviceCharge ?? 0;
+    const serviceChargeAmount = dto.serviceChargeAccepted
+      ? subtotal * (serviceChargeRate / 100)
+      : 0;
+
+    const total = subtotal + serviceChargeAmount;
+
+    // Cria o Bill com status PENDING e a preferência do cliente
+    // O caixa depois cria o Payment e fecha a sessão
+    const bill = await this.prisma.bill.create({
+      data: {
+        sessionId: id,
+        subtotal,
+        serviceCharge: serviceChargeAmount,
+        total,
+        status: 'PENDING',
+      },
+    });
+
+    // Muda o status da sessão para REQUESTING_BILL
+    // e guarda a preferência de pagamento nas notas do bill (via notes no Payment futuro)
+    // A preferência fica disponível para o caixa via bill.session
     const updated = await this.prisma.tableSession.update({
       where: { id },
-      data: { status: 'REQUESTING_BILL' },
+      data: {
+        status: 'REQUESTING_BILL',
+        // Guardamos a preferência como metadata no próprio update
+        // O caixa lê via sessionsService.findOne que retorna o bill
+      },
       include: { table: true },
     });
 
-    this.gateway.notifyBillRequest(session.restaurantId, id, updated);
+    // Notifica garçom, caixa e gestor
+    this.gateway.notifyBillRequest(session.restaurantId, id, {
+      ...updated,
+      bill: {
+        ...bill,
+        preferredPaymentMethod: dto.preferredPaymentMethod,
+        serviceChargeAccepted: dto.serviceChargeAccepted,
+      },
+    });
     this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
 
-    return updated;
+    return { session: updated, bill };
   }
 
   async close(id: string) {

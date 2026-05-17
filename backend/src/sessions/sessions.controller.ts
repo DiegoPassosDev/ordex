@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { OpenSessionDto } from './dto/open-session.dto';
 import { AssignWaiterDto } from './dto/assign-waiter.dto';
+import { RequestBillDto } from './dto/request-bill.dto';
 
 @Controller('sessions')
 export class SessionsController {
@@ -28,8 +29,8 @@ export class SessionsController {
   }
 
   @Patch(':id/request-bill')
-  requestBill(@Param('id') id: string) {
-    return this.sessionsService.requestBill(id);
+  requestBill(@Param('id') id: string, @Body() dto: RequestBillDto) {
+    return this.sessionsService.requestBill(id, dto);
   }
 
   @Patch(':id/close')
@@ -38,10 +39,7 @@ export class SessionsController {
   }
 
   @Post(':id/call-waiter')
-  callWaiter(
-    @Param('id') id: string,
-    @Body() body: { reason: string },
-  ) {
+  callWaiter(@Param('id') id: string, @Body() body: { reason: string }) {
     return this.sessionsService.callWaiter(id, body.reason);
   }
 

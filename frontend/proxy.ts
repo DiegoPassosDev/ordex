@@ -41,17 +41,18 @@ export function proxy(request: NextRequest) {
     if (employee) {
       const role = employee.role as string;
       const allowedPrefixes = ROLE_ROUTES[role] || [];
+
+      // Rota de cliente — funcionário não pode acessar
+      if (pathname.startsWith("/table")) {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
+
+      // Verifica se tem permissão para a rota atual
       const isAllowed = allowedPrefixes.some((prefix) =>
         pathname.startsWith(prefix),
       );
 
-      // Rota de cliente — funcionário não pode acessar
-      if (pathname.startsWith("/table") && employee) {
-        return NextResponse.redirect(new URL("/login", request.url));
-      }
-
       if (!isAllowed) {
-        // Redireciona para a rota correta do perfil
         const defaultRoute = allowedPrefixes[0] || "/login";
         return NextResponse.redirect(new URL(defaultRoute, request.url));
       }

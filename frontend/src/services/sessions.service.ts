@@ -1,11 +1,15 @@
-import { api } from '@/lib/api';
-import type { Table } from '@/types';
+import { api } from "@/lib/api";
+import type { Table } from "@/types";
 
 export const sessionsService = {
   async open(tableId: string, restaurantId: string, guestId?: string) {
-  const { data } = await api.post('/sessions', { tableId, restaurantId, guestId });
-  return data;
-},
+    const { data } = await api.post("/sessions", {
+      tableId,
+      restaurantId,
+      guestId,
+    });
+    return data;
+  },
 
   async getOne(sessionId: string) {
     const { data } = await api.get(`/sessions/${sessionId}`);
@@ -31,8 +35,17 @@ export const sessionsService = {
     return data;
   },
 
-  async requestBill(sessionId: string) {
-    const { data } = await api.patch(`/sessions/${sessionId}/request-bill`);
+  async requestBill(
+    sessionId: string,
+    body: {
+      preferredPaymentMethod: string;
+      serviceChargeAccepted: boolean;
+    },
+  ) {
+    const { data } = await api.patch(
+      `/sessions/${sessionId}/request-bill`,
+      body,
+    );
     return data;
   },
 

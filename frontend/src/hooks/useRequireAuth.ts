@@ -10,10 +10,16 @@ type RequiredRole =
   | "GUEST"
   | "CASHIER";
 
-export function useRequireAuth(role: RequiredRole) {
+export function useRequireAuth(role: RequiredRole | RequiredRole[]) {
   const { token, employee } = useAuthStore();
   const router = useRouter();
-  const normalizedRole = role.toUpperCase() as RequiredRole;
+
+  // Normaliza sempre para array
+  const allowedRoles = (Array.isArray(role) ? role : [role]).map(
+    (r) => r.toUpperCase() as RequiredRole,
+  );
+
+  const isGuestRoute = allowedRoles.includes("GUEST");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -24,24 +30,25 @@ export function useRequireAuth(role: RequiredRole) {
       .map((item) => item.trim())
       .find((item) => item.startsWith("ordex_auth="));
 
+    // Sem nenhuma autenticação
     if (!token && !persistedAuth && !authCookie) {
       router.replace("/login");
       return;
     }
 
+    // Token ainda hidratando — aguarda
     if (!token && (persistedAuth || authCookie)) {
       return;
     }
 
-    if (normalizedRole === "GUEST" && employee) {
+    // Rota de cliente — funcionário não pode acessar
+    if (isGuestRoute && employee) {
       router.replace("/login");
       return;
     }
 
-    if (
-      normalizedRole !== "GUEST" &&
-      (!employee || employee.role !== normalizedRole)
-    ) {
+    // Rota de funcionário — verifica se o role está na lista permitida
+    if (!isGuestRoute && (!employee || !allowedRoles.includes(employee.role as RequiredRole))) {
       router.replace("/login");
       return;
     }
