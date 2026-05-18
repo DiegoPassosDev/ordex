@@ -12,9 +12,7 @@ import { Server, Socket } from 'socket.io';
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000' },
 })
-export class OrdersGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -47,16 +45,15 @@ export class OrdersGateway
   }
 
   // Notifica novo pedido para o restaurante
-  notifyNewOrder(restaurantId: string, order: any) {
+  notifyNewOrder(restaurantId: string, order: any, sessionId?: string) {
     this.server.to(`restaurant_${restaurantId}`).emit('new_order', order);
+    if (sessionId) {
+      this.server.to(`session_${sessionId}`).emit('new_order', order);
+    }
   }
 
   // Notifica atualização de status para a sessão e o restaurante
-  notifyOrderStatusUpdate(
-    restaurantId: string,
-    sessionId: string,
-    order: any,
-  ) {
+  notifyOrderStatusUpdate(restaurantId: string, sessionId: string, order: any) {
     this.server
       .to(`restaurant_${restaurantId}`)
       .to(`session_${sessionId}`)
@@ -65,9 +62,7 @@ export class OrdersGateway
 
   // Notifica chamada de garçom
   notifyWaiterCall(restaurantId: string, data: any) {
-    this.server
-      .to(`restaurant_${restaurantId}`)
-      .emit('waiter_called', data);
+    this.server.to(`restaurant_${restaurantId}`).emit('waiter_called', data);
   }
 
   // Notifica pedido de conta
@@ -83,5 +78,35 @@ export class OrdersGateway
     this.server
       .to(`restaurant_${restaurantId}`)
       .emit('table_session_updated', data);
+  }
+
+  // ── Autorização de acesso à mesa ──────────────────────────────────────────
+
+  // Notifica o dono da sessão que alguém quer entrar
+  // O frontend do dono ouve 'table_access_requested'
+  notifyAccessRequest(
+    sessionId: string,
+    data: {
+      requestId: string;
+      guestId: string;
+      guestName: string;
+      tableNumber: number;
+      ownerId: string;
+    },
+  ) {
+    this.server.to(`session_${sessionId}`).emit('table_access_requested', data);
+  }
+
+  // Notifica o solicitante sobre a decisão do dono
+  // O frontend do solicitante ouve 'table_access_response'
+  notifyAccessResponse(
+    sessionId: string,
+    data: {
+      requestId: string;
+      approved: boolean;
+      guestId: string;
+    },
+  ) {
+    this.server.to(`session_${sessionId}`).emit('table_access_response', data);
   }
 }

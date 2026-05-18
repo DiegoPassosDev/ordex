@@ -66,7 +66,7 @@ export class OrdersService {
     });
 
     // Notifica cozinha, bar e gestor em tempo real
-    this.gateway.notifyNewOrder(session.restaurantId, order);
+    this.gateway.notifyNewOrder(session.restaurantId, order, dto.sessionId);
 
     return order;
   }

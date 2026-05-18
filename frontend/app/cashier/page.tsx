@@ -21,8 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import toast, { Toaster } from "react-hot-toast";
-
+import { CustomToaster, toast } from "@/components/ui/Toast";
 const PAYMENT_METHODS = [
   {
     value: "CASH",
@@ -264,7 +263,7 @@ export default function CashierPage() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <Toaster position="top-center" />
+      <CustomToaster />
 
       {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40 px-4 sm:px-6 py-4">

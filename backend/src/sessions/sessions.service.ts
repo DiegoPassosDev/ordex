@@ -8,6 +8,8 @@ import { OpenSessionDto } from './dto/open-session.dto';
 import { AssignWaiterDto } from './dto/assign-waiter.dto';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import { RequestBillDto } from './dto/request-bill.dto';
+import { RequestTableAccessDto } from './dto/request-table-access.dto';
+import { RespondTableAccessDto } from './dto/respond-table-access.dto';
 
 @Injectable()
 export class SessionsService {
@@ -55,6 +57,7 @@ export class SessionsService {
       include: {
         table: true,
         waiter: true,
+        guests: true,
         orders: {
           include: { items: { include: { menuItem: true } } },
           orderBy: { createdAt: 'asc' },
@@ -208,5 +211,98 @@ export class SessionsService {
     }, 0);
 
     return { sessionId: id, total };
+  }
+
+  async requestAccess(sessionId: string, dto: RequestTableAccessDto) {
+    const session = await this.findOne(sessionId);
+
+    if (session.status === 'CLOSED')
+      throw new BadRequestException('Sessão encerrada.');
+
+    // Verifica se o guest já está na sessão
+    const alreadyIn = session.guests?.some((g: any) => g.id === dto.guestId);
+    if (alreadyIn) throw new BadRequestException('Você já está nesta mesa.');
+
+    // O dono é o primeiro guest da sessão
+    const owner = session.guests?.[0];
+    if (!owner)
+      throw new BadRequestException('Nenhum dono encontrado para esta mesa.');
+
+    // Verifica se já existe uma solicitação pendente deste guest
+    const existing = await this.prisma.tableAccessRequest.findFirst({
+      where: { sessionId, guestId: dto.guestId, status: 'PENDING' },
+    });
+    if (existing) return existing; // retorna a existente sem criar nova
+
+    // Cria a solicitação
+    const request = await this.prisma.tableAccessRequest.create({
+      data: {
+        sessionId,
+        guestId: dto.guestId,
+        ownerId: owner.id,
+        status: 'PENDING',
+      },
+      include: { guest: true },
+    });
+
+    // Notifica o dono via WebSocket
+    this.gateway.notifyAccessRequest(sessionId, {
+      requestId: request.id,
+      guestId: dto.guestId,
+      guestName: request.guest.name,
+      tableNumber: session.table.number,
+      ownerId: owner.id,
+    });
+
+    return request;
+  }
+
+  async respondAccess(requestId: string, dto: RespondTableAccessDto) {
+    const request = await this.prisma.tableAccessRequest.findUnique({
+      where: { id: requestId },
+      include: { session: { include: { table: true, guests: true } } },
+    });
+
+    if (!request) throw new NotFoundException('Solicitação não encontrada.');
+
+    if (request.status !== 'PENDING')
+      throw new BadRequestException('Solicitação já respondida.');
+
+    // Verifica se quem está respondendo é o dono
+    if (request.ownerId !== dto.ownerId)
+      throw new BadRequestException('Apenas o dono da mesa pode autorizar.');
+
+    // Atualiza o status da solicitação
+    const updated = await this.prisma.tableAccessRequest.update({
+      where: { id: requestId },
+      data: { status: dto.approved ? 'APPROVED' : 'DENIED' },
+    });
+
+    // Se aprovado, conecta o guest à sessão
+    if (dto.approved) {
+      await this.prisma.tableSession.update({
+        where: { id: request.sessionId },
+        data: { guests: { connect: { id: request.guestId } } },
+      });
+    }
+
+    // Notifica o solicitante via WebSocket
+    this.gateway.notifyAccessResponse(request.sessionId, {
+      requestId,
+      approved: dto.approved,
+      guestId: request.guestId,
+    });
+
+    return updated;
+  }
+
+  async findActiveByTable(tableId: string) {
+    return this.prisma.tableSession.findFirst({
+      where: { tableId, status: { not: 'CLOSED' } },
+      include: {
+        table: true,
+        guests: true,
+      },
+    });
   }
 }

@@ -3,6 +3,8 @@ import { SessionsService } from './sessions.service';
 import { OpenSessionDto } from './dto/open-session.dto';
 import { AssignWaiterDto } from './dto/assign-waiter.dto';
 import { RequestBillDto } from './dto/request-bill.dto';
+import { RequestTableAccessDto } from './dto/request-table-access.dto';
+import { RespondTableAccessDto } from './dto/respond-table-access.dto';
 
 @Controller('sessions')
 export class SessionsController {
@@ -16,6 +18,11 @@ export class SessionsController {
   @Get('restaurant/:restaurantId/active')
   findActive(@Param('restaurantId') restaurantId: string) {
     return this.sessionsService.findActiveByRestaurant(restaurantId);
+  }
+
+  @Get('table/:tableId/active')
+  findActiveByTable(@Param('tableId') tableId: string) {
+    return this.sessionsService.findActiveByTable(tableId);
   }
 
   @Get(':id')
@@ -47,4 +54,19 @@ export class SessionsController {
   getTotal(@Param('id') id: string) {
     return this.sessionsService.getSessionTotal(id);
   }
+
+  @Post(':id/request-access')
+  requestAccess(@Param('id') id: string, @Body() dto: RequestTableAccessDto) {
+    return this.sessionsService.requestAccess(id, dto);
+  }
+
+  @Patch('access/:requestId/respond')
+  respondAccess(
+    @Param('requestId') requestId: string,
+    @Body() dto: RespondTableAccessDto,
+  ) {
+    return this.sessionsService.respondAccess(requestId, dto);
+  }
+
+  
 }

@@ -258,6 +258,9 @@ export default function LoginPage() {
                 value={form.email}
                 onChange={handleChange}
                 className={inputClass}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"                
               />
             </div>
 
@@ -270,6 +273,9 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 placeholder="Digite sua senha"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 value={form.password}
                 onChange={handleChange}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}

@@ -64,12 +64,25 @@ export function useTablePage() {
   const [orderNotifications, setOrderNotifications] = useState<
     OrderNotification[]
   >([]);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+
+  // ── Acesso à mesa ─────────────────────────────────────────────────────────
+  const [waitingForAccess, setWaitingForAccess] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [ownerName, setOwnerName] = useState<string | null>(null);
+  const [incomingRequest, setIncomingRequest] = useState<{
+    requestId: string;
+    guestId: string;
+    guestName: string;
+  } | null>(null);
 
   // ── Loading state ─────────────────────────────────────────────────────────
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [identifyingTable, setIdentifyingTable] = useState(false);
+
+  // ── Bill / conta ──────────────────────────────────────────────────────────
   const [showBillModal, setShowBillModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("PIX");
   const [acceptService, setAcceptService] = useState(true);
@@ -81,7 +94,8 @@ export function useTablePage() {
 
   // ── Derived values ────────────────────────────────────────────────────────
   const TABLE_ID = tableIdFromUrl || tableIdFromStore;
-  const hasTable = !!TABLE_ID && !!tableNumber;
+  const hasTable = !!TABLE_ID;
+  const RESTAURANT_ID = restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
   const cartTotal = cart.reduce((acc, c) => acc + c.price * c.quantity, 0);
   const cartCount = cart.reduce((acc, c) => acc + c.quantity, 0);
   const activeOrders = orders.filter(
@@ -114,7 +128,7 @@ export function useTablePage() {
     [sessionId],
   );
 
-  // ── Carrega cardápio e nome do restaurante ────────────────────────────────
+  // ── Carrega cardápio e dados do restaurante ───────────────────────────────
   const loadMenu = useCallback(async (rid: string) => {
     try {
       setLoadingMenu(true);
@@ -133,81 +147,179 @@ export function useTablePage() {
     }
   }, []);
 
-  // ── Identifica mesa pelo id (QR ou store) ─────────────────────────────────
+  // ── Identifica mesa e gerencia acesso ─────────────────────────────────────
   const identifyTable = useCallback(
     async (id: string, showSuccess = false) => {
       try {
         setIdentifyingTable(true);
+
+        // ✅ Lê o guestId direto do store, garantindo o valor atual
+        const currentGuestId = useAuthStore.getState().guest?.id;
+
         const table = await sessionsService.getTable(id);
         setTableId(table.id, table.restaurantId);
         setTableNumber(String(table.number));
-        const session = await sessionsService.open(
+
+        const existingSession = await sessionsService.getActiveSession(
           table.id,
-          table.restaurantId,
-          guest?.id,
         );
-        setSessionId(session.id);
-        await Promise.all([
-          loadMenu(table.restaurantId),
-          loadOrders(session.id),
-        ]);
-        if (showSuccess) {
-          setScanning(false);
-          setConfirmed(true);
-          setTimeout(() => setConfirmed(false), 2000);
+
+        if (existingSession) {
+          const alreadyIn = existingSession.guests?.some(
+            (g: any) => g.id === currentGuestId, // ← usa o valor garantido
+          );
+
+          if (alreadyIn) {
+            // Já está na sessão — entra normalmente
+            setSessionId(existingSession.id);
+            await Promise.all([
+              loadMenu(table.restaurantId),
+              loadOrders(existingSession.id),
+            ]);
+            if (showSuccess) {
+              setScanning(false);
+              setConfirmed(true);
+              setTimeout(() => setConfirmed(false), 2000);
+            }
+          } else {
+            // Não está — pede autorização
+            const ownerGuest = existingSession.guests?.[0];
+            setOwnerName(ownerGuest?.name?.split(" ")[0] || "o responsável");
+            setPendingSessionId(existingSession.id);
+
+            await sessionsService.requestAccess(
+              existingSession.id,
+              currentGuestId!,
+            );
+            setWaitingForAccess(true);
+            await loadMenu(table.restaurantId);
+          }
+        } else {
+          const session = await sessionsService.open(
+            table.id,
+            table.restaurantId,
+            currentGuestId,
+          );
+          setSessionId(session.id);
+          await Promise.all([
+            loadMenu(table.restaurantId),
+            loadOrders(session.id),
+          ]);
+          if (showSuccess) {
+            setScanning(false);
+            setConfirmed(true);
+            setTimeout(() => setConfirmed(false), 2000);
+          }
         }
-      } catch {
+      } catch (err) {
+        console.error("Erro no identifyTable:", err);
         toast.error("Não foi possível identificar a mesa.");
       } finally {
         setIdentifyingTable(false);
       }
     },
-    [guest?.id, loadMenu, loadOrders, setSessionId, setTableId, setTableNumber],
+    [loadMenu, loadOrders, setSessionId, setTableId, setTableNumber], // ← removido guest?.id das deps
   );
-
   // ── Bootstrap — roda uma vez após montar ─────────────────────────────────
   useEffect(() => {
+    if (!hasHydrated) return;
+
     const urlTableId = new URLSearchParams(window.location.search).get(
       "tableId",
     );
-    const storeTableId = useAuthStore.getState().tableId;
-    const storeRestaurantId = useAuthStore.getState().restaurantId;
-    const storeSessionId = useAuthStore.getState().sessionId;
+
+    const storeState = useAuthStore.getState();
+
+    const storeTableId = storeState.tableId;
+    const storeRestaurantId = storeState.restaurantId;
+    const storeSessionId = storeState.sessionId;
 
     const effectiveTableId = urlTableId || storeTableId;
 
-    if (effectiveTableId) {
-      identifyTable(effectiveTableId);
-    } else if (storeRestaurantId && storeSessionId) {
+    // ✅ Já possui sessão salva → apenas recarrega dados
+    if (storeSessionId && storeRestaurantId) {
       loadMenu(storeRestaurantId);
       loadOrders(storeSessionId);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    // ✅ Não possui sessão → identifica mesa novamente
+    if (
+      effectiveTableId &&
+      guest?.id &&
+      !waitingForAccess &&
+      !pendingSessionId
+    ) {
+      identifyTable(effectiveTableId);
+    }
+  }, [hasHydrated, guest?.id || null, waitingForAccess, pendingSessionId]);
 
   // ── WebSocket — atualizações em tempo real ────────────────────────────────
-  useSocket(sessionId ? { type: "session", id: sessionId } : null, {
-    order_status_updated: (order: any) => {
-      loadOrders();
-      const statusMessages: Record<string, string> = {
-        PREPARING: "🍳 Seu pedido entrou em preparo!",
-        READY: "✅ Seu pedido está pronto!",
-        ON_THE_WAY: "🚶 Seu pedido está a caminho!",
-        DELIVERED: "🎉 Pedido entregue. Bom apetite!",
-        CANCELLED: "❌ Um pedido foi cancelado.",
-      };
-      const msg = statusMessages[order?.status];
-      if (msg) {
-        setOrderNotifications((prev) =>
-          [{ id: `${Date.now()}`, message: msg, read: false }, ...prev].slice(
-            0,
-            10,
-          ),
-        );
-      }
+  useSocket(
+    sessionId || pendingSessionId
+      ? { type: "session", id: (sessionId || pendingSessionId)! }
+      : null,
+    {
+      order_status_updated: (order: any) => {
+        loadOrders();
+        const statusMessages: Record<string, string> = {
+          PREPARING: "🍳 Seu pedido entrou em preparo!",
+          READY: "✅ Seu pedido está pronto!",
+          ON_THE_WAY: "🚶 Seu pedido está a caminho!",
+          DELIVERED: "🎉 Pedido entregue. Bom apetite!",
+          CANCELLED: "❌ Um pedido foi cancelado.",
+        };
+        const msg = statusMessages[order?.status];
+        if (msg) {
+          setOrderNotifications((prev) =>
+            [{ id: `${Date.now()}`, message: msg, read: false }, ...prev].slice(
+              0,
+              10,
+            ),
+          );
+        }
+      },
+      new_order: () => loadOrders(),
+      bill_requested: () => {
+        setBillRequested(true);
+      },
+
+      // Dono recebe solicitação de acesso de outro guest
+      table_access_requested: (data: any) => {
+        if (data.ownerId !== guest?.id) return; // ← LINHA NOVA
+        setIncomingRequest({
+          requestId: data.requestId,
+          guestId: data.guestId,
+          guestName: data.guestName,
+        });
+      },
+
+      // Solicitante recebe a resposta do dono
+      table_access_response: async (data: any) => {
+        if (data.guestId !== guest?.id) return;
+        if (data.approved) {
+          // ✅ Só agora salva o sessionId de verdade no store
+          if (pendingSessionId) {
+            setSessionId(pendingSessionId); // ← salva no store só após aprovação
+            setPendingSessionId(null); // ← limpa o temporário
+            await loadOrders(pendingSessionId);
+          }
+          const currentRestaurantId = useAuthStore.getState().restaurantId;
+          if (currentRestaurantId) {
+            await loadMenu(currentRestaurantId);
+          }
+          setWaitingForAccess(false);
+          setConfirmed(true);
+          setTimeout(() => setConfirmed(false), 2000);
+          toast.success("Acesso autorizado! Bem-vindo à mesa.");
+        } else {
+          setWaitingForAccess(false);
+          setPendingSessionId(null); // ← limpa também se negado
+          setAccessDenied(true);
+        }
+      },
     },
-    new_order: () => loadOrders(),
-  });
+  );
 
   // ── Ações ─────────────────────────────────────────────────────────────────
   function handleQrScan(scannedTableId: string) {
@@ -254,12 +366,16 @@ export function useTablePage() {
       toast.error("Escaneie o QR Code da mesa primeiro.");
       return;
     }
+
     setLoadingOrder(true);
     try {
       let currentSessionId = sessionId;
       if (!currentSessionId) {
-        const rid = useAuthStore.getState().restaurantId || "";
-        const session = await sessionsService.open(TABLE_ID, rid, guest.id);
+        const session = await sessionsService.open(
+          TABLE_ID,
+          RESTAURANT_ID,
+          guest.id,
+        );
         currentSessionId = session.id;
         setSessionId(session.id);
       }
@@ -335,25 +451,44 @@ export function useTablePage() {
   }
 
   async function handleRequestBill() {
-  if (!sessionId) return;
-  setRequestingBill(true);
-  try {
-    await sessionsService.requestBill(sessionId, {
-      preferredPaymentMethod: paymentMethod,
-      serviceChargeAccepted: acceptService,
-    });
-    setBillRequested(true);
-    setShowBillModal(false);
-    toast.success("Conta solicitada! O garçom virá em breve.");
-  } catch (err: any) {
-    const msg = err?.response?.data?.message || "Erro ao solicitar a conta.";
-    toast.error(Array.isArray(msg) ? msg[0] : msg);
-  } finally {
-    setRequestingBill(false);
+    if (!sessionId) return;
+    setRequestingBill(true);
+    try {
+      await sessionsService.requestBill(sessionId, {
+        preferredPaymentMethod: paymentMethod,
+        serviceChargeAccepted: acceptService,
+      });
+      setBillRequested(true);
+      setShowBillModal(false);
+      toast.success("Conta solicitada! O garçom virá em breve.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Erro ao solicitar a conta.";
+      toast.error(Array.isArray(msg) ? msg[0] : msg);
+    } finally {
+      setRequestingBill(false);
+    }
   }
-}
 
-  // ── Retorno — tudo que o page.tsx precisa ─────────────────────────────────
+  async function handleRespondAccess(approved: boolean) {
+    if (!incomingRequest || !guest?.id) return;
+    try {
+      await sessionsService.respondAccess(
+        incomingRequest.requestId,
+        guest.id,
+        approved,
+      );
+      setIncomingRequest(null);
+      if (approved) {
+        toast.success(`${incomingRequest.guestName} entrou na mesa!`);
+      } else {
+        toast.error(`Acesso negado para ${incomingRequest.guestName}.`);
+      }
+    } catch {
+      toast.error("Erro ao responder solicitação.");
+    }
+  }
+
+  // ── Retorno ───────────────────────────────────────────────────────────────
   return {
     // Auth / sessão
     guest,
@@ -401,6 +536,14 @@ export function useTablePage() {
 
     // Refs
     notifRef,
+
+    // Acesso à mesa
+    waitingForAccess,
+    accessDenied,
+    setAccessDenied,
+    ownerName,
+    incomingRequest,
+    handleRespondAccess,
 
     // Ações
     handleQrScan,

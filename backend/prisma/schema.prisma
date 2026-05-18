@@ -58,12 +58,33 @@ model TableSession {
   guests     Guest[]
   bill       Bill?
   ratings    Rating[]
+  accessRequests      TableAccessRequest[]
 }
 
 enum TableSessionStatus {
   OPEN
   REQUESTING_BILL
   CLOSED
+}
+
+model TableAccessRequest {
+  id          String   @id @default(uuid())
+  sessionId   String
+  guestId     String                    // quem está pedindo acesso
+  ownerId     String                    // dono da sessão (primeiro guest)
+  status      AccessRequestStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  session     TableSession @relation(fields: [sessionId], references: [id])
+  guest       Guest        @relation("AccessRequests",   fields: [guestId],  references: [id])
+  owner       Guest        @relation("AccessRequestsOwned", fields: [ownerId], references: [id])
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
 
 // ─── CLIENTES ────────────────────────────────────────────────────────────────
@@ -83,6 +104,8 @@ model Guest {
   orders       Order[]
   sessions     TableSession[]
   debts        CustomerDebt[]
+  accessRequests      TableAccessRequest[] @relation("AccessRequests")
+  ownedAccessRequests TableAccessRequest[] @relation("AccessRequestsOwned")
 }
 
 

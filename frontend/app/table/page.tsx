@@ -26,6 +26,11 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { BillRequestModal } from "./BillRequestModal";
 import { Receipt } from "lucide-react";
+import {
+  WaitingForAccessScreen,
+  AccessDeniedScreen,
+  AccessRequestModal,
+} from "./TableAccessScreens";
 
 const HEADER_HEIGHT = 72;
 
@@ -157,8 +162,26 @@ function TablePageInner() {
     );
   }
 
+// ── Aguardando autorização ────────────────────────────────────────────────
+  if (p.waitingForAccess) {
+    return <WaitingForAccessScreen ownerName={p.ownerName} />;
+  }
+
+// ── Tela de acesso negado ─────────────────────────────────────────────────
+  if (p.accessDenied) {
+    return (
+      <AccessDeniedScreen
+        onRetry={() => {
+          p.setAccessDenied(false);
+          p.setScanning(false);
+        }}
+      />
+    );
+  }
+
   // ── Tela de confirmação de mesa ───────────────────────────────────────────
-  if (p.confirmed) {
+  if (p.confirmed) {   
+
     return (
       <div className="min-h-screen bg-gray-900 w-full max-w-md mx-auto flex flex-col items-center justify-center gap-4 px-8">
         <div className="w-20 h-20 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
@@ -794,6 +817,14 @@ function TablePageInner() {
           requesting={p.requestingBill}
           onConfirm={p.handleRequestBill}
           onClose={() => p.setShowBillModal(false)}
+        />
+      )}
+
+      {p.incomingRequest && (
+        <AccessRequestModal
+          guestName={p.incomingRequest.guestName}
+          onApprove={() => p.handleRespondAccess(true)}
+          onDeny={() => p.handleRespondAccess(false)}
         />
       )}
     </div>

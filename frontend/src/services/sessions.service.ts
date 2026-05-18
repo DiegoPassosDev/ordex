@@ -65,4 +65,28 @@ export const sessionsService = {
     const { data } = await api.patch(`/sessions/${sessionId}/close`);
     return data;
   },
+
+  async requestAccess(sessionId: string, guestId: string) {
+    const { data } = await api.post(`/sessions/${sessionId}/request-access`, {
+      guestId,
+    });
+    return data;
+  },
+
+  async respondAccess(requestId: string, ownerId: string, approved: boolean) {
+    const { data } = await api.patch(`/sessions/access/${requestId}/respond`, {
+      ownerId,
+      approved,
+    });
+    return data;
+  },
+
+  async getActiveSession(tableId: string) {
+    try {
+      const { data } = await api.get(`/sessions/table/${tableId}/active`);
+      return data;
+    } catch {
+      return null; // sem sessão ativa
+    }
+  },
 };
