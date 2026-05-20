@@ -1,13 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class GuestsService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(id: string, user: { sub?: string; role?: string }) {
+  async findOne(id: string, user: { id?: string; role?: string }) {
     // Guests só podem ver os próprios dados
-    if (user.role === 'GUEST' && user.sub !== id) {
+    if (user.role === 'GUEST' && user.id !== id) {
       throw new NotFoundException('Cliente não encontrado.');
     }
 

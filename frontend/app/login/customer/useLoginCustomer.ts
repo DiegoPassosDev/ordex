@@ -62,9 +62,9 @@ export function useLoginCustomer() {
           const guestData = await api.get(`/guests/${guestId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          guestName = guestData.data.name || form.email;
+          guestName = guestData.data.name || "Cliente";
         } catch {
-          guestName = form.email;
+          guestName = "Cliente";
         }
       }
 
