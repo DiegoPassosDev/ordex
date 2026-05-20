@@ -102,7 +102,9 @@ export class EmployeesService {
     });
 
     if (!employee || !employee.active)
-      throw new UnauthorizedException('Credenciais inválidas ou conta inativa.');
+      throw new UnauthorizedException(
+        'Credenciais inválidas ou conta inativa.',
+      );
 
     const valid = await bcrypt.compare(dto.password, employee.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas.');

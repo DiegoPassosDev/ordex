@@ -7,21 +7,44 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
+
+type SocketUser = {
+  sub?: string;
+  role?: string;
+  restaurantId?: string;
+};
 
 @WebSocketGateway({
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000' },
 })
 export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  constructor(private jwt: JwtService) {}
+
   @WebSocketServer()
   server!: Server;
 
   handleConnection(client: Socket) {
-    console.log(`Cliente conectado: ${client.id}`);
+    const token = client.handshake.auth?.token;
+    if (typeof token !== 'string') {
+      client.disconnect(true);
+      return;
+    }
+
+    try {
+      const user = this.jwt.verify<SocketUser>(token);
+      client.data.user = user;
+      if (user.sub) {
+        void client.join(`guest_${user.sub}`);
+      }
+    } catch {
+      client.disconnect(true);
+    }
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Cliente desconectado: ${client.id}`);
+    void client.id;
   }
 
   // Cliente entra na sala da sessão da mesa
@@ -30,8 +53,8 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() sessionId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    client.join(`session_${sessionId}`);
-    console.log(`Cliente ${client.id} entrou na sessão ${sessionId}`);
+    if (!client.data.user) return;
+    void client.join(`session_${sessionId}`);
   }
 
   // Cliente entra na sala do restaurante (gestor, cozinha, bar)
@@ -40,8 +63,17 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() restaurantId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    client.join(`restaurant_${restaurantId}`);
-    console.log(`Cliente ${client.id} entrou no restaurante ${restaurantId}`);
+    const user = client.data.user as SocketUser | undefined;
+    const role = user?.role?.toUpperCase();
+    if (
+      !user ||
+      role === 'GUEST' ||
+      (user.restaurantId && user.restaurantId !== restaurantId)
+    ) {
+      return;
+    }
+
+    void client.join(`restaurant_${restaurantId}`);
   }
 
   // Notifica novo pedido para o restaurante
@@ -94,7 +126,10 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       ownerId: string;
     },
   ) {
-    this.server.to(`session_${sessionId}`).emit('table_access_requested', data);
+    this.server
+      .to(`session_${sessionId}`)
+      .to(`guest_${data.ownerId}`)
+      .emit('table_access_requested', data);
   }
 
   // Notifica o solicitante sobre a decisão do dono
@@ -107,6 +142,9 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       guestId: string;
     },
   ) {
-    this.server.to(`session_${sessionId}`).emit('table_access_response', data);
+    this.server
+      .to(`session_${sessionId}`)
+      .to(`guest_${data.guestId}`)
+      .emit('table_access_response', data);
   }
 }

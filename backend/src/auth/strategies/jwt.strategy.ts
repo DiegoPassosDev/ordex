@@ -16,13 +16,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; role: string }) {
-    const guest = await this.prisma.guest.findUnique({
+  async validate(payload: {
+    sub: string;
+    role: string;
+    restaurantId?: string;
+  }) {
+    if (payload.role === 'GUEST' || payload.role === 'guest') {
+      const guest = await this.prisma.guest.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!guest) throw new UnauthorizedException();
+
+      return { id: guest.id, email: guest.email, role: 'GUEST' };
+    }
+
+    const employee = await this.prisma.employee.findUnique({
       where: { id: payload.sub },
     });
 
-    if (!guest) throw new UnauthorizedException();
+    if (!employee || !employee.active) throw new UnauthorizedException();
 
-    return { id: guest.id, email: guest.email, role: payload.role };
+    return {
+      id: employee.id,
+      email: employee.email,
+      role: employee.role,
+      restaurantId: employee.restaurantId,
+    };
   }
 }

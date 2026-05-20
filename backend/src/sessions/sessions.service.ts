@@ -9,7 +9,7 @@ import { AssignWaiterDto } from './dto/assign-waiter.dto';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import { RequestBillDto } from './dto/request-bill.dto';
 import { RequestTableAccessDto } from './dto/request-table-access.dto';
-import { RespondTableAccessDto } from './dto/respond-table-access.dto';
+
 
 @Injectable()
 export class SessionsService {
@@ -185,6 +185,31 @@ export class SessionsService {
     return updated;
   }
 
+  async leaveSession(sessionId: string, guestId: string) {
+    const session = await this.findOne(sessionId);
+    if (session.status === 'CLOSED') return;
+
+    const updated = await this.prisma.tableSession.update({
+      where: { id: sessionId },
+      data: { guests: { disconnect: { id: guestId } } },
+      include: { table: true, guests: true }, // ← inclui guests para contar
+    });
+
+    // ✅ Se não sobrou nenhum guest, fecha a sessão automaticamente
+    if (updated.guests.length === 0) {
+      const closed = await this.prisma.tableSession.update({
+        where: { id: sessionId },
+        data: { status: 'CLOSED', closedAt: new Date() },
+        include: { table: true },
+      });
+      this.gateway.notifyTableSessionUpdate(session.restaurantId, closed);
+      return;
+    }
+
+    // Ainda tem guests — só notifica atualização
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
+  }
+
   async callWaiter(id: string, reason: string) {
     const session = await this.findOne(id);
     if (session.status === 'CLOSED')
@@ -231,8 +256,19 @@ export class SessionsService {
     // Verifica se já existe uma solicitação pendente deste guest
     const existing = await this.prisma.tableAccessRequest.findFirst({
       where: { sessionId, guestId: dto.guestId, status: 'PENDING' },
+      include: { guest: true },
     });
-    if (existing) return existing; // retorna a existente sem criar nova
+    if (existing) {
+      this.gateway.notifyAccessRequest(sessionId, {
+        requestId: existing.id,
+        guestId: dto.guestId,
+        guestName: existing.guest.name,
+        tableNumber: session.table.number,
+        ownerId: owner.id,
+      });
+
+      return existing;
+    }
 
     // Cria a solicitação
     const request = await this.prisma.tableAccessRequest.create({
@@ -257,7 +293,7 @@ export class SessionsService {
     return request;
   }
 
-  async respondAccess(requestId: string, dto: RespondTableAccessDto) {
+  async respondAccess(requestId: string, approved: boolean, userId: string) {
     const request = await this.prisma.tableAccessRequest.findUnique({
       where: { id: requestId },
       include: { session: { include: { table: true, guests: true } } },
@@ -269,17 +305,17 @@ export class SessionsService {
       throw new BadRequestException('Solicitação já respondida.');
 
     // Verifica se quem está respondendo é o dono
-    if (request.ownerId !== dto.ownerId)
+    if (request.ownerId !== userId)
       throw new BadRequestException('Apenas o dono da mesa pode autorizar.');
 
     // Atualiza o status da solicitação
     const updated = await this.prisma.tableAccessRequest.update({
       where: { id: requestId },
-      data: { status: dto.approved ? 'APPROVED' : 'DENIED' },
+      data: { status: approved ? 'APPROVED' : 'DENIED' },
     });
 
     // Se aprovado, conecta o guest à sessão
-    if (dto.approved) {
+    if (approved) {
       await this.prisma.tableSession.update({
         where: { id: request.sessionId },
         data: { guests: { connect: { id: request.guestId } } },
@@ -289,7 +325,7 @@ export class SessionsService {
     // Notifica o solicitante via WebSocket
     this.gateway.notifyAccessResponse(request.sessionId, {
       requestId,
-      approved: dto.approved,
+      approved,
       guestId: request.guestId,
     });
 
@@ -303,6 +339,13 @@ export class SessionsService {
         table: true,
         guests: true,
       },
+    });
+  }
+
+  async getPendingAccessRequests(sessionId: string) {
+    return this.prisma.tableAccessRequest.findMany({
+      where: { sessionId, status: 'PENDING' },
+      include: { guest: true },
     });
   }
 }

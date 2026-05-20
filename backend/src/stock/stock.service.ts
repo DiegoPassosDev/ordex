@@ -241,6 +241,13 @@ export class StockService {
 
   // ── Baixa automática por pedido ──
   async deductByOrder(orderId: string) {
+    const alreadyDeducted = await this.prisma.stockExit.findFirst({
+      where: { orderId },
+      select: { id: true },
+    });
+
+    if (alreadyDeducted) return;
+
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {

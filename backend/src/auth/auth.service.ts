@@ -33,7 +33,7 @@ export class AuthService {
       },
     });
 
-    return this.signToken(guest.id, 'guest');
+    return this.signToken(guest.id, 'GUEST');
   }
 
   async login(dto: LoginDto) {
@@ -47,7 +47,7 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, guest.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas.');
 
-    return this.signToken(guest.id, 'guest');
+    return this.signToken(guest.id, 'GUEST');
   }
 
   async signToken(userId: string, role: string) {

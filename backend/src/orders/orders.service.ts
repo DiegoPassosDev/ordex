@@ -45,7 +45,12 @@ export class OrdersService {
         guestId: dto.guestId,
         items: {
           create: dto.items.map((item) => {
-            const menuItem = menuItems.find((m) => m.id === item.menuItemId)!;
+            const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+            if (!menuItem) {
+              throw new BadRequestException(
+                'Item indisponível ou inexistente.',
+              );
+            }
             return {
               menuItemId: item.menuItemId,
               quantity: item.quantity,
