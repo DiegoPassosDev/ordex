@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTableDto } from './dto/create-table.dto';
@@ -56,6 +57,16 @@ export class TablesService {
 
   async remove(id: string) {
     await this.findOne(id);
+
+    const activeSession = await this.prisma.tableSession.findFirst({
+      where: { tableId: id, status: { not: 'CLOSED' } },
+      select: { id: true },
+    });
+    if (activeSession)
+      throw new BadRequestException(
+        'Não é possível excluir uma mesa com sessão ativa.',
+      );
+
     return this.prisma.table.delete({ where: { id } });
   }
 }
