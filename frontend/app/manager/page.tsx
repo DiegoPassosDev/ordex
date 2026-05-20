@@ -1,15 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/store/auth.store";
-import { sessionsService } from "@/services/sessions.service";
-import { ordersService } from "@/services/orders.service";
-import { useSocket } from "@/hooks/useSocket";
 import {
   LayoutGrid,
   ClipboardList,
@@ -20,25 +14,15 @@ import {
   ChefHat,
   Package,
   Loader2,
-  X,
-  UserCheck,
-  Clock,
-  DollarSign,
-  AlertCircle,
   LogOut,
 } from "lucide-react";
-import {
-  TableSession,
-  Order,
-  Employee,
-  Guest,
-  ORDER_STATUS_LABEL,
-  ORDER_STATUS_COLOR,
-} from "@/types";
+import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
-import { useAppModal } from "@/context/AppModalContext";
+import { useManagerDashboard } from "./useManagerDashboard";
+import { SessionDetailModal } from "./SessionDetailModal";
+import { CloseConfirmModal } from "./CloseConfirmModal";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -75,197 +59,33 @@ const tableStatusConfig = {
   },
 };
 
-type DashboardSession = TableSession & {
-  guests?: Guest[];
-};
-
 export default function ManagerDashboard() {
   useRequireAuth("MANAGER");
-  const { employee, clearAuth } = useAuthStore();
+  const { clearAuth } = useAuthStore();
   const router = useRouter();
-  const { showModal } = useAppModal();
-  const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
-
-  const [sessions, setSessions] = useState<DashboardSession[]>([]);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSession, setSelectedSession] =
-    useState<DashboardSession | null>(null);
-  const [cancelling, setCancelling] = useState<string | null>(null);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
-
-  const loadData = useCallback(
-    async (showSpinner = true) => {
-      try {
-        if (showSpinner) setLoading(true);
-        const [sessionsResponse, ordersResponse] = await Promise.all([
-          sessionsService.getActiveByRestaurant(restaurantId),
-          ordersService.getByRestaurant(restaurantId),
-        ]);
-        const sessionsData = sessionsResponse as DashboardSession[];
-        const ordersData = ordersResponse as Order[];
-        setSessions(sessionsData);
-        setRecentOrders(ordersData);
-        const waiters = sessionsData
-          .map((s) => s.waiter)
-          .filter((waiter): waiter is Employee => Boolean(waiter))
-          .filter(
-            (waiter, index, arr) =>
-              arr.findIndex((item) => item.id === waiter.id) === index,
-          );
-        setEmployees(waiters);
-        setSelectedSession((current) => {
-          if (!current) return current;
-          return (
-            sessionsData.find((session) => session.id === current.id) ?? null
-          );
-        });
-      } catch {
-        showModal({
-          title: "Dashboard indisponível",
-          message: "Não foi possível carregar os dados do painel.",
-          variant: "error",
-        });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [restaurantId, showModal],
-  );
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useSocket(
-    { type: "restaurant", id: restaurantId },
-    {
-      table_session_updated: () => loadData(false),
-      new_order: () => loadData(false),
-      order_status_updated: () => loadData(false),
-      bill_requested: () => loadData(false),
-    },
-  );
-
-  async function handleCancelOrder(orderId: string) {
-    if (!confirm("Deseja cancelar este pedido?")) return;
-    setCancelling(orderId);
-    try {
-      await ordersService.cancel(orderId);
-      await loadData();
-    } catch {
-      showModal({
-        title: "Pedido não cancelado",
-        message: "Não foi possível cancelar este pedido.",
-        variant: "error",
-      });
-    } finally {
-      setCancelling(null);
-    }
-  }
-
-  function handleCloseClick(sessionId: string) {
-    setClosingSessionId(sessionId);
-    setShowCloseConfirm(true);
-  }
-
-  async function handleConfirmClose() {
-    if (!closingSessionId) return;
-    setShowCloseConfirm(false);
-    try {
-      await sessionsService.close(closingSessionId);
-      setSelectedSession(null);
-      setClosingSessionId(null);
-      await loadData();
-    } catch {
-      showModal({
-        title: "Mesa não encerrada",
-        message: "Não foi possível encerrar esta mesa.",
-        variant: "error",
-      });
-    }
-  }
-
-  function getSessionStatus(session: TableSession): "free" | "open" | "bill" {
-    if (session.status === "REQUESTING_BILL") return "bill";
-    return "open";
-  }
-
-  function getSessionTotal(session: TableSession): number {
-    return (
-      session.orders?.reduce((acc, o) => {
-        if (o.status === "CANCELLED") return acc;
-        return acc + o.items.reduce((s, i) => s + i.price * i.quantity, 0);
-      }, 0) || 0
-    );
-  }
-
-  function getOrderElapsed(order: Order): string {
-    const start = new Date(order.createdAt).getTime();
-
-    // Se finalizado, busca o timestamp do último status no histórico
-    const isFinal =
-      order.status === "DELIVERED" || order.status === "CANCELLED";
-    if (isFinal && order.statusHistory && order.statusHistory.length > 0) {
-      const lastEntry = [...order.statusHistory]
-        .filter((h) => h.status === order.status)
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )[0];
-
-      if (lastEntry) {
-        const minutes = Math.floor(
-          (new Date(lastEntry.createdAt).getTime() - start) / 60000,
-        );
-        return `${minutes} min ✓`;
-      }
-    }
-
-    // Ainda em andamento — tempo até agora
-    const minutes = Math.floor((Date.now() - start) / 60000);
-    return `${minutes} min`;
-  }
-
-  function getSessionDuration(date: string): string {
-    const minutes = Math.floor((Date.now() - new Date(date).getTime()) / 60000);
-    if (minutes < 60) return `${minutes} min`;
-    return `${Math.floor(minutes / 60)}h ${minutes % 60}min`;
-  }
-
-  function getGuestName(session: DashboardSession | null): string | null {
-    const guest = session?.guests?.[0];
-
-    if (!guest) return null;
-
-    return guest.name?.trim() || guest.email || null;
-  }
-
-  const openSessions = sessions.filter((s) => s.status !== "CLOSED");
-
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setHours(23, 59, 59, 999);
-
-  const todayOrders = recentOrders.filter((o) => {
-    const d = new Date(o.createdAt);
-    return d >= todayStart && d <= todayEnd;
-  });
-
-  const totalRevenue = todayOrders
-  .filter((o) => o.status !== "CANCELLED")
-  .reduce(
-    (acc, o) => acc + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
-    0,
-  );
-
-  const activeOrders = todayOrders.filter(
-    (o) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
-  );
+  const {
+    restaurantId,
+    openSessions,
+    todayOrders,
+    employees,
+    loading,
+    selectedSession,
+    setSelectedSession,
+    cancelling,
+    showCloseConfirm,
+    setShowCloseConfirm,
+    setClosingSessionId,
+    handleCancelOrder,
+    handleCloseClick,
+    handleConfirmClose,
+    getSessionStatus,
+    getSessionTotal,
+    getOrderElapsed,
+    getSessionDuration,
+    getGuestName,
+    totalRevenue,
+    activeOrders,
+  } = useManagerDashboard();
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -285,7 +105,6 @@ export default function ManagerDashboard() {
             </div>
           )}
 
-          {/* Métricas — 1 coluna no mobile, 2 no tablet, 4 no desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
             <MetricCard
               title="Mesas Abertas"
@@ -313,9 +132,7 @@ export default function ManagerDashboard() {
             />
           </div>
 
-          {/* Conteúdo — empilhado no mobile, lado a lado no desktop */}
           <div className="flex flex-col xl:grid xl:grid-cols-3 gap-6">
-            {/* Mapa de Mesas */}
             <div className="xl:col-span-2">
               <Card>
                 <CardHeader className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -326,12 +143,10 @@ export default function ManagerDashboard() {
                       <span className="w-2 h-2 rounded-full bg-gray-500" />
                       Livre
                     </span>
-
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-green-400" />
                       Ocupada
                     </span>
-
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-orange-400" />
                       Conta
@@ -359,14 +174,11 @@ export default function ManagerDashboard() {
                           <span className="text-sm font-bold text-gray-100">
                             Mesa {session.table?.number}
                           </span>
-                          <span
-                            className={`w-2 h-2 rounded-full ${config.dot}`}
-                          />
+                          <span className={`w-2 h-2 rounded-full ${config.dot}`} />
                         </div>
                         <p className={`text-xs font-medium ${config.text}`}>
                           {config.label}
                         </p>
-                        {/* Nome do cliente — só exibe quando a mesa está ocupada */}
                         {session.guests && session.guests.length > 0 && (
                           <p className="text-xs font-medium text-gray-200 truncate">
                             {session.guests[0].name?.split(" ")[0] ??
@@ -386,7 +198,6 @@ export default function ManagerDashboard() {
               </Card>
             </div>
 
-            {/* Pedidos Recentes */}
             <div className="xl:col-span-1">
               <Card>
                 <CardHeader>
@@ -414,9 +225,7 @@ export default function ManagerDashboard() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-gray-100 truncate">
-                            {order.items
-                              .map((i) => i.menuItem?.name)
-                              .join(", ")}
+                            {order.items.map((i) => i.menuItem?.name).join(", ")}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
                             {order.session?.waiter?.name || "Sem garçom"}
@@ -442,221 +251,29 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Modal de Detalhes da Mesa */}
       {selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setSelectedSession(null)}
-          />
-          <div className="relative bg-gray-800 rounded-t-3xl sm:rounded-2xl border border-gray-700 w-full sm:max-w-2xl mx-0 sm:mx-4 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-gray-700">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
-                  <span className="text-orange-400 font-bold">
-                    {selectedSession.table?.number}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-lg">
-                    Mesa {selectedSession.table?.number}
-                  </h3>
-                  <p className="text-xs text-gray-400">
-                    {getSessionStatus(selectedSession) === "bill"
-                      ? "⚠️ Pedindo conta"
-                      : "● Sessão ativa"}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setSelectedSession(null)}>
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2 p-4 border-b border-gray-700">
-              <div className="bg-gray-700/50 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Users className="w-3.5 h-3.5 text-orange-400" />
-                  <p className="text-xs text-gray-400">Cliente</p>
-                </div>
-                <p className="text-sm font-semibold text-white truncate">
-                  {getGuestName(selectedSession)?.split(" ")[0] || "—"}
-                </p>
-              </div>
-              <div className="bg-gray-700/50 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <UserCheck className="w-3.5 h-3.5 text-blue-400" />
-                  <p className="text-xs text-gray-400">Garçom</p>
-                </div>
-                <p className="text-sm font-semibold text-white truncate">
-                  {selectedSession.waiter?.name || "Nenhum"}
-                </p>
-              </div>
-              <div className="bg-gray-700/50 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Clock className="w-3.5 h-3.5 text-purple-400" />
-                  <p className="text-xs text-gray-400">Tempo</p>
-                </div>
-                <p className="text-sm font-semibold text-white">
-                  {getSessionDuration(selectedSession.openedAt)}
-                </p>
-              </div>
-              <div className="bg-gray-700/50 rounded-xl p-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <DollarSign className="w-3.5 h-3.5 text-green-400" />
-                  <p className="text-xs text-gray-400">Total</p>
-                </div>
-                <p className="text-sm font-bold text-green-400">
-                  R$ {getSessionTotal(selectedSession).toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Pedidos ({selectedSession.orders?.length || 0})
-              </p>
-
-              {(!selectedSession.orders ||
-                selectedSession.orders.length === 0) && (
-                <p className="text-gray-500 text-sm text-center py-8">
-                  Nenhum pedido ainda
-                </p>
-              )}
-
-              <div className="space-y-3">
-                {selectedSession.orders
-                  ?.slice()
-                  .sort((a, b) => {
-                    const order = [
-                      "WAITING",
-                      "PREPARING",
-                      "READY",
-                      "ON_THE_WAY",
-                      "DELIVERED",
-                      "CANCELLED",
-                    ];
-                    return order.indexOf(a.status) - order.indexOf(b.status);
-                  })
-                  .map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-gray-700/50 rounded-xl p-3 border border-gray-600"
-                    >
-                      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <StatusBadge status={order.status} />
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-400">
-                            {getOrderElapsed(order)}
-                          </span>
-                          <span className="text-sm font-bold text-white">
-                            R${" "}
-                            {order.items
-                              .reduce((acc, i) => acc + i.price * i.quantity, 0)
-                              .toFixed(2)}
-                          </span>
-                          {order.status !== "CANCELLED" &&
-                            order.status !== "DELIVERED" && (
-                              <button
-                                onClick={() => handleCancelOrder(order.id)}
-                                disabled={cancelling === order.id}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs disabled:opacity-50"
-                              >
-                                {cancelling === order.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <AlertCircle className="w-3 h-3" />
-                                )}
-                                Cancelar
-                              </button>
-                            )}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        {order.items.map((item, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
-                              {item.quantity}
-                            </span>
-                            <span className="text-sm text-gray-200">
-                              {item.menuItem?.name}
-                            </span>
-                            {item.notes && (
-                              <span className="text-xs text-gray-400 italic">
-                                — {item.notes}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-gray-700 flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-400">Total acumulado</p>
-                <p className="text-xl font-bold text-green-400">
-                  R$ {getSessionTotal(selectedSession).toFixed(2)}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  className="bg-gray-700 border-gray-600 text-gray-300"
-                  onClick={() => setSelectedSession(null)}
-                >
-                  Fechar
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleCloseClick(selectedSession.id)}
-                >
-                  Encerrar Mesa
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SessionDetailModal
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
+          getSessionStatus={getSessionStatus}
+          getSessionTotal={getSessionTotal}
+          getOrderElapsed={getOrderElapsed}
+          getSessionDuration={getSessionDuration}
+          getGuestName={getGuestName}
+          handleCancelOrder={handleCancelOrder}
+          handleCloseClick={handleCloseClick}
+          cancelling={cancelling}
+        />
       )}
 
-      {/* ── Modal confirmar encerramento de mesa ────────────────────────── */}
       {showCloseConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setShowCloseConfirm(false)}
-          />
-          <div className="relative w-full max-w-sm bg-gray-800 border border-gray-700 rounded-3xl p-6 flex flex-col gap-4">
-            <div className="flex flex-col items-center text-center gap-2">
-              <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mb-1">
-                <AlertCircle className="w-6 h-6 text-red-400" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Encerrar mesa?</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                A sessão será encerrada e os clientes serão notificados.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowCloseConfirm(false);
-                  setClosingSessionId(null);
-                }}
-                className="flex-1 py-3 rounded-2xl bg-gray-700 border border-gray-600 text-gray-300 font-medium text-sm hover:bg-gray-600 transition-all"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmClose}
-                className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-medium text-sm transition-all"
-              >
-                Encerrar
-              </button>
-            </div>
-          </div>
-        </div>
+        <CloseConfirmModal
+          onCancel={() => {
+            setShowCloseConfirm(false);
+            setClosingSessionId(null);
+          }}
+          onConfirm={handleConfirmClose}
+        />
       )}
     </div>
   );
