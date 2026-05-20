@@ -289,6 +289,12 @@ export class StockService {
               orderId,
             },
           });
+        } else {
+          console.warn(
+            `[ESTOQUE INSUFICIENTE] Item "${ingredient.stockItem.name}" (${ingredient.stockItemId}): ` +
+              `necessário ${stockQty}${ingredient.unit}, disponível ${currentItem?.quantity ?? 0}${ingredient.stockItem.unit}. ` +
+              `Pedido #${orderId.slice(0, 8)} foi entregue sem baixa total.`,
+          );
         }
       }
     }
