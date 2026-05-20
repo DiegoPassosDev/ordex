@@ -89,23 +89,39 @@ export class StockService {
   }) {
     const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    const entries = await Promise.all(
-      data.items.map((item) =>
-        this.createEntry({
-          ...item,
-          restaurantId: data.restaurantId,
-          supplierId: data.supplierId,
-          note: data.note,
-          groupId,
+    return this.prisma.$transaction(async (tx) => {
+      const entries = await Promise.all(
+        data.items.map(async (item) => {
+          const totalCost = item.quantity * item.costPerUnit;
+          const entry = await tx.stockEntry.create({
+            data: {
+              stockItemId: item.stockItemId,
+              supplierId: data.supplierId,
+              restaurantId: data.restaurantId,
+              quantity: item.quantity,
+              costPerUnit: item.costPerUnit,
+              totalCost,
+              note: data.note,
+              groupId,
+            },
+          });
+          await tx.stockItem.update({
+            where: { id: item.stockItemId },
+            data: {
+              quantity: { increment: item.quantity },
+              costPerUnit: item.costPerUnit,
+            },
+          });
+          return { ...entry, totalCost };
         }),
-      ),
-    );
+      );
 
-    return {
-      groupId,
-      entries,
-      totalCost: entries.reduce((acc, e: any) => acc + e.totalCost, 0),
-    };
+      return {
+        groupId,
+        entries,
+        totalCost: entries.reduce((acc, e) => acc + e.totalCost, 0),
+      };
+    });
   }
 
   async findEntries(restaurantId: string) {
@@ -305,9 +321,11 @@ export class StockService {
     menuItemId: string,
     ingredients: { stockItemId: string; quantity: number; unit: string }[],
   ) {
-    await this.prisma.menuItemIngredient.deleteMany({ where: { menuItemId } });
-    return this.prisma.menuItemIngredient.createMany({
-      data: ingredients.map((i) => ({ ...i, menuItemId, unit: i.unit as any })),
+    return this.prisma.$transaction(async (tx) => {
+      await tx.menuItemIngredient.deleteMany({ where: { menuItemId } });
+      return tx.menuItemIngredient.createMany({
+        data: ingredients.map((i) => ({ ...i, menuItemId, unit: i.unit as any })),
+      });
     });
   }
 
