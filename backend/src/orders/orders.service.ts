@@ -27,14 +27,16 @@ export class OrdersService {
     if (session.status === 'CLOSED')
       throw new BadRequestException('Esta mesa já foi encerrada.');
 
+    const uniqueItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
+
     const menuItems = await this.prisma.menuItem.findMany({
       where: {
-        id: { in: dto.items.map((i) => i.menuItemId) },
+        id: { in: uniqueItemIds },
         available: true,
       },
     });
 
-    if (menuItems.length !== dto.items.length)
+    if (menuItems.length !== uniqueItemIds.length)
       throw new BadRequestException(
         'Um ou mais itens estão indisponíveis ou não existem.',
       );
