@@ -214,17 +214,18 @@ export class PaymentsService {
   }
 
   async getCashierReport(restaurantId: string, date?: string) {
-    const startDate = date ? new Date(date) : new Date();
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setHours(23, 59, 59, 999);
+    const where: any = { restaurantId, status: 'PAID' };
+
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(startDate);
+      endDate.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: startDate, lte: endDate };
+    }
 
     const payments = await this.prisma.payment.findMany({
-      where: {
-        restaurantId,
-        createdAt: { gte: startDate, lte: endDate },
-        status: 'PAID',
-      },
+      where,
       include: { cashier: true, session: { include: { table: true } } },
     });
 

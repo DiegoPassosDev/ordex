@@ -90,17 +90,18 @@ export class OrdersService {
   }
 
   async findByRestaurant(restaurantId: string, date?: string) {
-    const start = date ? new Date(date) : new Date();
-    start.setHours(0, 0, 0, 0);
+    const where: any = { session: { restaurantId } };
 
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
+    if (date) {
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    }
 
     return this.prisma.order.findMany({
-      where: {
-        session: { restaurantId },
-        createdAt: { gte: start, lte: end },
-      },
+      where,
       include: {
         items: { include: { menuItem: true } },
         session: { include: { table: true, waiter: true } },
