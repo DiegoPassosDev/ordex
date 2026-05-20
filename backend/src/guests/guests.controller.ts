@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { GuestsService } from './guests.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -11,7 +11,7 @@ export class GuestsController {
 
   @Get(':id')
   @Roles('GUEST', 'MANAGER', 'WAITER', 'CASHIER')
-  findOne(@Param('id') id: string) {
-    return this.guestsService.findOne(id);
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.guestsService.findOne(id, req.user);
   }
 }
