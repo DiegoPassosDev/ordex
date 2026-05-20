@@ -842,6 +842,22 @@ function TablePageInner() {
           onDeny={() => p.handleRespondAccess(false)}
         />
       )}
+
+      {/* ── Overlay mesa encerrada pelo gestor ──────────────────────────── */}
+      {p.sessionClosedByManager && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
+          <div className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded-3xl p-6 flex flex-col items-center text-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+              <LogOut className="w-8 h-8 text-orange-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Mesa encerrada</h3>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              O gestor encerrou esta mesa. Voltando para o início em 5 segundos…
+            </p>
+            <Loader2 className="w-5 h-5 text-orange-400 animate-spin mt-1" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

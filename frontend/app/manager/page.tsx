@@ -94,6 +94,8 @@ export default function ManagerDashboard() {
   const [selectedSession, setSelectedSession] =
     useState<DashboardSession | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [closingSessionId, setClosingSessionId] = useState<string | null>(null);
 
   const loadData = useCallback(
     async (showSpinner = true) => {
@@ -165,11 +167,18 @@ export default function ManagerDashboard() {
     }
   }
 
-  async function handleCloseSession(sessionId: string) {
-    if (!confirm("Deseja encerrar esta mesa?")) return;
+  function handleCloseClick(sessionId: string) {
+    setClosingSessionId(sessionId);
+    setShowCloseConfirm(true);
+  }
+
+  async function handleConfirmClose() {
+    if (!closingSessionId) return;
+    setShowCloseConfirm(false);
     try {
-      await sessionsService.close(sessionId);
+      await sessionsService.close(closingSessionId);
       setSelectedSession(null);
+      setClosingSessionId(null);
       await loadData();
     } catch {
       showModal({
@@ -237,14 +246,24 @@ export default function ManagerDashboard() {
 
   const openSessions = sessions.filter((s) => s.status !== "CLOSED");
 
-  const totalRevenue = recentOrders
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const todayOrders = recentOrders.filter((o) => {
+    const d = new Date(o.createdAt);
+    return d >= todayStart && d <= todayEnd;
+  });
+
+  const totalRevenue = todayOrders
   .filter((o) => o.status !== "CANCELLED")
   .reduce(
     (acc, o) => acc + o.items.reduce((s, i) => s + i.price * i.quantity, 0),
     0,
   );
 
-  const activeOrders = recentOrders.filter(
+  const activeOrders = todayOrders.filter(
     (o) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
   );
 
@@ -375,14 +394,14 @@ export default function ManagerDashboard() {
                   <span className="text-xs text-gray-400">Tempo real</span>
                 </CardHeader>
 
-                {recentOrders.length === 0 && !loading && (
+                {todayOrders.length === 0 && !loading && (
                   <p className="text-gray-500 text-sm text-center py-8">
-                    Nenhum pedido ainda
+                    Nenhum pedido hoje
                   </p>
                 )}
 
                 <div className="space-y-2">
-                  {recentOrders.slice(0, 8).map((order) => (
+                  {todayOrders.slice(0, 8).map((order) => (
                     <div
                       key={order.id}
                       className="flex items-start justify-between p-3 rounded-xl bg-gray-800 gap-2"
@@ -592,11 +611,49 @@ export default function ManagerDashboard() {
                 </Button>
                 <Button
                   variant="danger"
-                  onClick={() => handleCloseSession(selectedSession.id)}
+                  onClick={() => handleCloseClick(selectedSession.id)}
                 >
                   Encerrar Mesa
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar encerramento de mesa ────────────────────────── */}
+      {showCloseConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setShowCloseConfirm(false)}
+          />
+          <div className="relative w-full max-w-sm bg-gray-800 border border-gray-700 rounded-3xl p-6 flex flex-col gap-4">
+            <div className="flex flex-col items-center text-center gap-2">
+              <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center mb-1">
+                <AlertCircle className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Encerrar mesa?</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                A sessão será encerrada e os clientes serão notificados.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCloseConfirm(false);
+                  setClosingSessionId(null);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-gray-700 border border-gray-600 text-gray-300 font-medium text-sm hover:bg-gray-600 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmClose}
+                className="flex-1 py-3 rounded-2xl bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-medium text-sm transition-all"
+              >
+                Encerrar
+              </button>
             </div>
           </div>
         </div>

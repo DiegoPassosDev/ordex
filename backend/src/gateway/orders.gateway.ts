@@ -134,6 +134,21 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('table_session_updated', data);
   }
 
+  // Notifica clientes que a mesa foi encerrada pelo gestor
+  notifySessionClosedByManager(
+    sessionId: string,
+    data: { guestIds: string[]; tableNumber: number },
+  ) {
+    for (const guestId of data.guestIds) {
+      this.server.to(`guest_${guestId}`).emit('session_closed_by_manager', {
+        tableNumber: data.tableNumber,
+      });
+    }
+    this.server
+      .to(`session_${sessionId}`)
+      .emit('session_closed_by_manager', { tableNumber: data.tableNumber });
+  }
+
   // ── Autorização de acesso à mesa ──────────────────────────────────────────
 
   // Notifica o dono da sessão que alguém quer entrar

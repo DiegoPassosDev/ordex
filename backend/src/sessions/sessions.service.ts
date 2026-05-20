@@ -182,6 +182,11 @@ export class SessionsService {
 
     this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
 
+    this.gateway.notifySessionClosedByManager(id, {
+      guestIds: session.guests.map((g) => g.id),
+      tableNumber: session.table.number,
+    });
+
     return updated;
   }
 

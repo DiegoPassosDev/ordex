@@ -91,6 +91,17 @@ export function useTablePage() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [identifyingTable, setIdentifyingTable] = useState(false);
 
+  // ── Sessão encerrada pelo gestor ──────────────────────────────────────────
+  const [sessionClosedByManager, setSessionClosedByManager] = useState(false);
+
+  useEffect(() => {
+    if (!sessionClosedByManager) return;
+    const timer = setTimeout(() => {
+      handleLogout();
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [sessionClosedByManager]);
+
   // ── Bill / conta ──────────────────────────────────────────────────────────
   const [showBillModal, setShowBillModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("PIX");
@@ -367,6 +378,11 @@ export function useTablePage() {
         });
       },
 
+      // Mesa encerrada pelo gestor
+      session_closed_by_manager: () => {
+        setSessionClosedByManager(true);
+      },
+
       // Solicitante recebe a resposta do dono
       table_access_response: async (data: any) => {
         if (data.guestId !== guest?.id) return;
@@ -627,6 +643,9 @@ export function useTablePage() {
     loadOrders,
     handleRequestBill,
     enableAccessAlerts,
+
+    // Sessão encerrada pelo gestor
+    sessionClosedByManager,
 
     // Bill / conta
     showBillModal,
