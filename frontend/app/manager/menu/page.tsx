@@ -297,7 +297,7 @@ export default function MenuPage() {
           {!loading && filteredCategories.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-20 text-gray-500">
               <p className="text-sm">
-                Nenhum item encontrado para "{searchQuery}"
+                Nenhum item encontrado para &quot;{searchQuery}&quot;
               </p>
             </div>
           )}

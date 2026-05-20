@@ -4,7 +4,8 @@ import { Employee, Guest } from "@/types";
 
 function setCookie(value: string) {
   if (typeof document === "undefined") return;
-  document.cookie = `ordex_auth=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 7}`;
+  const secure = window.location.protocol === "https:" ? "; secure" : "";
+  document.cookie = `ordex_auth=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
 }
 
 function deleteCookie() {
@@ -57,7 +58,15 @@ export const useAuthStore = create<AuthState>()(
           restaurantId: restaurantId || null,
           sessionId: sessionId || null,
         });
-        setCookie(JSON.stringify({ state: { token, guest, employee: null } }));
+        setCookie(
+          JSON.stringify({
+            state: {
+              authenticated: true,
+              guest: { id: guest.id, name: guest.name, email: guest.email },
+              employee: null,
+            },
+          }),
+        );
       },
 
       setEmployeeAuth: (token, employee) => {
@@ -68,12 +77,29 @@ export const useAuthStore = create<AuthState>()(
           restaurantId: employee.restaurantId,
           sessionId: null,
         });
-        setCookie(JSON.stringify({ state: { token, employee, guest: null } }));
+        setCookie(
+          JSON.stringify({
+            state: {
+              authenticated: true,
+              guest: null,
+              employee: {
+                id: employee.id,
+                name: employee.name,
+                role: employee.role,
+                restaurantId: employee.restaurantId,
+              },
+            },
+          }),
+        );
       },
 
       setSessionId: (sessionId) => set({ sessionId }),
 
-      setTableId: (tableId) => set({ tableId }),
+      setTableId: (tableId, restaurantId) =>
+        set({
+          tableId,
+          ...(restaurantId ? { restaurantId } : {}),
+        }),
 
       setTableNumber: (tableNumber) => set({ tableNumber }),
 
@@ -107,8 +133,20 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "ordex_auth",
+      // ✅ Persiste tudo EXCETO dados de sessão/mesa do cliente
+      partialize: (state) => ({
+        token: state.token,
+        guest: state.guest,
+        employee: state.employee,
+
+        // ✅ persistir sessão da mesa
+        restaurantId: state.restaurantId,
+        sessionId: state.sessionId,
+        tableId: state.tableId,
+        tableNumber: state.tableNumber,
+      }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true); // ← dispara quando o localStorage termina de ser lido
+        state?.setHasHydrated(true);
       },
     },
   ),

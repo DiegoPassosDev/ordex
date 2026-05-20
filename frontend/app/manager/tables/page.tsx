@@ -30,6 +30,7 @@ import { TableSession } from "@/types";
 import { CustomToaster, toast } from "@/components/ui/Toast";
 import { useRouter } from "next/navigation";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAppModal } from "@/context/AppModalContext";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -53,6 +54,7 @@ interface Table {
 export default function TablesPage() {
   useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
+  const { showModal } = useAppModal();
   const restaurantId =
     employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
@@ -161,7 +163,11 @@ export default function TablesPage() {
         },
         (err, url) => {
           if (err) {
-            console.error("Erro ao gerar QR code:", err);
+            showModal({
+              title: "QR Code não gerado",
+              message: "Não foi possível gerar o QR Code desta mesa.",
+              variant: "error",
+            });
             toast.error("Erro ao gerar QR code.");
           } else {
             setQrCodeImage(url);

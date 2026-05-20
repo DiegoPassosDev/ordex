@@ -66,6 +66,13 @@ export const sessionsService = {
     return data;
   },
 
+  async leaveSession(sessionId: string, guestId: string) {
+    const { data } = await api.post(`/sessions/${sessionId}/leave`, {
+      guestId,
+    });
+    return data;
+  },
+
   async requestAccess(sessionId: string, guestId: string) {
     const { data } = await api.post(`/sessions/${sessionId}/request-access`, {
       guestId,
@@ -73,9 +80,8 @@ export const sessionsService = {
     return data;
   },
 
-  async respondAccess(requestId: string, ownerId: string, approved: boolean) {
+  async respondAccess(requestId: string, approved: boolean) {
     const { data } = await api.patch(`/sessions/access/${requestId}/respond`, {
-      ownerId,
       approved,
     });
     return data;
@@ -88,5 +94,12 @@ export const sessionsService = {
     } catch {
       return null; // sem sessão ativa
     }
+  },
+
+  async getPendingAccessRequests(sessionId: string) {
+    const { data } = await api.get(
+      `/sessions/${sessionId}/access-requests/pending`,
+    );
+    return data;
   },
 };

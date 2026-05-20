@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
+import { useAuthStore } from "@/store/auth.store";
 
 function getSocketUrl() {
   if (process.env.NEXT_PUBLIC_API_URL) {
@@ -21,11 +22,21 @@ export function useSocket(
   handlers: Record<string, (data: any) => void>,
 ) {
   const socketRef = useRef<Socket | null>(null);
+  const handlersRef = useRef(handlers);
+  const token = useAuthStore((state) => state.token);
+  const eventNames = Object.keys(handlers).sort().join("|");
 
   useEffect(() => {
-    if (!room?.id) return;
+    handlersRef.current = handlers;
+  }, [handlers]);
 
-    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+  useEffect(() => {
+    if (!room?.id || !token) return;
+
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket"],
+      auth: { token },
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -36,14 +47,12 @@ export function useSocket(
       }
     });
 
-    Object.entries(handlers).forEach(([event, handler]) => {
-      socket.on(event, handler);
+    eventNames.split("|").filter(Boolean).forEach((event) => {
+      socket.on(event, (data) => handlersRef.current[event]?.(data));
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [room?.id, room?.type]);
-
-  return socketRef.current;
+  }, [eventNames, room?.id, room?.type, token]);
 }

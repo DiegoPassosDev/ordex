@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { AppModalProvider } from "@/context/AppModalContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,9 +38,29 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+          (function() {
+            try {
+              var stored = localStorage.getItem('ordex-theme');
+              var theme = stored === 'light' || stored === 'dark'
+                ? stored
+                : window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+              document.documentElement.classList.add('theme-' + theme);
+              document.documentElement.style.colorScheme = theme;
+            } catch(e) {}
+          })();
+        `,
+          }}
+        />
+      </head>
       <body>
         <ThemeProvider>
-          <NotificationProvider>{children}</NotificationProvider>
+          <AppModalProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </AppModalProvider>
         </ThemeProvider>
       </body>
     </html>

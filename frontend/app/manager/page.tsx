@@ -38,6 +38,7 @@ import {
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
+import { useAppModal } from "@/context/AppModalContext";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -82,6 +83,7 @@ export default function ManagerDashboard() {
   useRequireAuth("MANAGER");
   const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
+  const { showModal } = useAppModal();
   const restaurantId =
     employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
@@ -119,13 +121,17 @@ export default function ManagerDashboard() {
             sessionsData.find((session) => session.id === current.id) ?? null
           );
         });
-      } catch (err) {
-        console.error("Erro ao carregar dados:", err);
+      } catch {
+        showModal({
+          title: "Dashboard indisponível",
+          message: "Não foi possível carregar os dados do painel.",
+          variant: "error",
+        });
       } finally {
         setLoading(false);
       }
     },
-    [restaurantId],
+    [restaurantId, showModal],
   );
 
   useEffect(() => {
@@ -149,7 +155,11 @@ export default function ManagerDashboard() {
       await ordersService.cancel(orderId);
       await loadData();
     } catch {
-      console.error("Erro ao cancelar pedido");
+      showModal({
+        title: "Pedido não cancelado",
+        message: "Não foi possível cancelar este pedido.",
+        variant: "error",
+      });
     } finally {
       setCancelling(null);
     }
@@ -162,7 +172,11 @@ export default function ManagerDashboard() {
       setSelectedSession(null);
       await loadData();
     } catch {
-      console.error("Erro ao encerrar mesa");
+      showModal({
+        title: "Mesa não encerrada",
+        message: "Não foi possível encerrar esta mesa.",
+        variant: "error",
+      });
     }
   }
 

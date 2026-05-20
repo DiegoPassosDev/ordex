@@ -8,8 +8,10 @@ import { ordersService } from "@/services/orders.service";
 import { sessionsService } from "@/services/sessions.service";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
+import { useTableAccessAlerts } from "@/hooks/useTableAccessAlerts";
 import { Category, Order } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { useAppModal } from "@/context/AppModalContext";
 
 export type Tab = "menu" | "orders";
 
@@ -29,6 +31,13 @@ export interface OrderNotification {
 
 export function useTablePage() {
   const router = useRouter();
+  const { showModal } = useAppModal();
+  const {
+    accessAlertsEnabled,
+    accessAlertsPermission,
+    enableAccessAlerts,
+    notifyAccessRequest,
+  } = useTableAccessAlerts();
   const searchParams = useSearchParams();
   const tableIdFromUrl = searchParams.get("tableId");
 
@@ -91,6 +100,7 @@ export function useTablePage() {
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const notifRef = useRef<HTMLDivElement>(null);
+  const identifyingRef = useRef(false);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const TABLE_ID = tableIdFromUrl || tableIdFromStore;
@@ -122,10 +132,14 @@ export function useTablePage() {
         const data = await ordersService.getBySession(sid);
         setOrders(data);
       } catch {
-        console.error("Erro ao carregar pedidos");
+        showModal({
+          title: "Pedidos indisponíveis",
+          message: "Não foi possível carregar seus pedidos agora.",
+          variant: "error",
+        });
       }
     },
-    [sessionId],
+    [sessionId, showModal],
   );
 
   // ── Carrega cardápio e dados do restaurante ───────────────────────────────
@@ -150,6 +164,8 @@ export function useTablePage() {
   // ── Identifica mesa e gerencia acesso ─────────────────────────────────────
   const identifyTable = useCallback(
     async (id: string, showSuccess = false) => {
+      if (identifyingRef.current) return;
+      identifyingRef.current = true;
       try {
         setIdentifyingTable(true);
 
@@ -211,14 +227,20 @@ export function useTablePage() {
             setTimeout(() => setConfirmed(false), 2000);
           }
         }
-      } catch (err) {
-        console.error("Erro no identifyTable:", err);
+      } catch {
+        showModal({
+          title: "Mesa não identificada",
+          message:
+            "Não foi possível validar esta mesa. Tente ler o QR Code novamente.",
+          variant: "error",
+        });
         toast.error("Não foi possível identificar a mesa.");
       } finally {
         setIdentifyingTable(false);
+        identifyingRef.current = false;
       }
     },
-    [loadMenu, loadOrders, setSessionId, setTableId, setTableNumber], // ← removido guest?.id das deps
+    [loadMenu, loadOrders, setSessionId, setTableId, setTableNumber, showModal], // ← removido guest?.id das deps
   );
   // ── Bootstrap — roda uma vez após montar ─────────────────────────────────
   useEffect(() => {
@@ -244,15 +266,65 @@ export function useTablePage() {
     }
 
     // ✅ Não possui sessão → identifica mesa novamente
-    if (
-      effectiveTableId &&
-      guest?.id &&
-      !waitingForAccess &&
-      !pendingSessionId
-    ) {
-      identifyTable(effectiveTableId);
+    if (effectiveTableId) {
+      const currentGuest = useAuthStore.getState().guest;
+
+      if (!currentGuest?.id) {
+        // Não está logado — redireciona para login de cliente
+        // preservando o tableId na URL para entrar direto após o login
+        router.push(`/login/customer?tableId=${effectiveTableId}`);
+        return;
+      }
+
+      if (!waitingForAccess && !pendingSessionId) {
+        identifyTable(effectiveTableId);
+      }
     }
-  }, [hasHydrated, guest?.id || null, waitingForAccess, pendingSessionId]);
+  }, [hasHydrated, guest?.id, waitingForAccess, pendingSessionId]);
+
+  // ── Polling ao voltar ao foco — verifica solicitações pendentes ───────────
+  useEffect(() => {
+    async function checkPendingRequests() {
+      if (!sessionId || waitingForAccess) return;
+
+      try {
+        const pending =
+          await sessionsService.getPendingAccessRequests(sessionId);
+        if (pending && pending.length > 0) {
+          const req = pending[0];
+          if (req.ownerId === guest?.id) {
+            // Se já está visível na tela, não duplica notificação
+            if (incomingRequest?.requestId === req.id) return;
+
+            notifyAccessRequest(req.guest.name, undefined);
+            setIncomingRequest({
+              requestId: req.id,
+              guestId: req.guestId,
+              guestName: req.guest.name,
+            });
+          }
+        }
+      } catch {
+        // silencioso
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        checkPendingRequests();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Polling periódico como fallback (a cada 30s)
+    const interval = window.setInterval(checkPendingRequests, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(interval);
+    };
+  }, [sessionId, guest?.id, waitingForAccess, incomingRequest?.requestId]);
 
   // ── WebSocket — atualizações em tempo real ────────────────────────────────
   useSocket(
@@ -287,6 +359,7 @@ export function useTablePage() {
       // Dono recebe solicitação de acesso de outro guest
       table_access_requested: (data: any) => {
         if (data.ownerId !== guest?.id) return; // ← LINHA NOVA
+        void notifyAccessRequest(data.guestName, data.tableNumber);
         setIncomingRequest({
           requestId: data.requestId,
           guestId: data.guestId,
@@ -419,16 +492,11 @@ export function useTablePage() {
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      if (sessionId) {
+      if (sessionId && guest?.id) {
         const session = await sessionsService.getOne(sessionId);
         if (session.status !== "CLOSED") {
-          const total = await sessionsService.getTotal(sessionId);
-          if (total.total > 0) {
-            toast.error("Existe uma conta pendente nesta mesa.");
-            setLoggingOut(false);
-            return;
-          }
-          await sessionsService.close(sessionId);
+          // ✅ Apenas sai da sessão, não fecha para todos
+          await sessionsService.leaveSession(sessionId, guest.id);
         }
       }
     } catch {
@@ -436,7 +504,7 @@ export function useTablePage() {
       setLoggingOut(false);
     }
     logout();
-    router.push("/login");
+    router.push("/login/customer");
   }
 
   function handleToggleNotifications() {
@@ -474,7 +542,6 @@ export function useTablePage() {
     try {
       await sessionsService.respondAccess(
         incomingRequest.requestId,
-        guest.id,
         approved,
       );
       setIncomingRequest(null);
@@ -511,6 +578,8 @@ export function useTablePage() {
     confirmed,
     showNotifications,
     hasHydrated,
+    accessAlertsEnabled,
+    accessAlertsPermission,
 
     // Dados
     cart,
@@ -557,6 +626,7 @@ export function useTablePage() {
     clearNotifications,
     loadOrders,
     handleRequestBill,
+    enableAccessAlerts,
 
     // Bill / conta
     showBillModal,

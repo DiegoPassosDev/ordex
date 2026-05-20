@@ -5,7 +5,7 @@ function getApiBaseUrl() {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  
+
   return "/api";
 }
 
@@ -26,8 +26,14 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== "undefined") {
-        localStorage.removeItem("ordex_token");
-        window.location.href = "/login";
+        const isLoginRoute = window.location.pathname.startsWith("/login");
+
+        // ✅ Se está na tela de login, não redireciona — deixa o toast aparecer
+        if (!isLoginRoute) {
+          useAuthStore.getState().clearAuth();
+          const isCustomerRoute = window.location.pathname.startsWith("/table");
+          window.location.href = isCustomerRoute ? "/login/customer" : "/login";
+        }
       }
     }
     return Promise.reject(error);

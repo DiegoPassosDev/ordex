@@ -290,6 +290,21 @@ function TablePageInner() {
       </div>
 
       {/* ── Sem mesa — convite para escanear ───────────────────────────── */}
+      {p.hasTable &&
+        !p.accessAlertsEnabled &&
+        p.accessAlertsPermission !== "denied" && (
+          <div className="px-4 pt-3">
+            <button
+              type="button"
+              onClick={p.enableAccessAlerts}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-100 transition hover:bg-orange-500/20"
+            >
+              <Bell className="h-3.5 w-3.5" />
+              Ativar alertas de acesso à mesa
+            </button>
+          </div>
+        )}
+
       {!p.hasTable && !p.scanning && (
         <div className="flex flex-col items-center justify-center px-6 pt-16 pb-32 gap-6">
           <div className="w-full bg-gray-800 border border-gray-700 rounded-3xl p-8 flex flex-col items-center gap-5 text-center">
