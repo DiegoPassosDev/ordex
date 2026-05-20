@@ -125,7 +125,7 @@ export class SessionsService {
       select: { serviceCharge: true },
     });
 
-    const serviceChargeRate = restaurant?.serviceCharge ?? 0;
+    const serviceChargeRate = restaurant?.serviceCharge ?? 10;
     const serviceChargeAmount = dto.serviceChargeAccepted
       ? subtotal * (serviceChargeRate / 100)
       : 0;
