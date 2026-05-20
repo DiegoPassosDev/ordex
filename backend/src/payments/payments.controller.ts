@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import { CreatePaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -19,7 +20,7 @@ export class PaymentsController {
 
   @Post()
   @Roles('CASHIER', 'MANAGER')
-  create(@Body() body: any) {
+  create(@Body() body: CreatePaymentDto) {
     return this.service.createPayment(body);
   }
 
