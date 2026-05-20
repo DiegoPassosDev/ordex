@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
+import { PrismaService } from '../prisma/prisma.service';
 
 type SocketUser = {
   sub?: string;
@@ -20,7 +21,10 @@ type SocketUser = {
   cors: { origin: process.env.FRONTEND_URL || 'http://localhost:3000' },
 })
 export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private jwt: JwtService) {}
+  constructor(
+    private jwt: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   @WebSocketServer()
   server!: Server;
@@ -43,17 +47,35 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
-    void client.id;
+  handleDisconnect(_client: Socket) {
+    // cleanup se necessário
   }
 
   // Cliente entra na sala da sessão da mesa
   @SubscribeMessage('join_session')
-  handleJoinSession(
+  async handleJoinSession(
     @MessageBody() sessionId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    if (!client.data.user) return;
+    const user = client.data.user as SocketUser | undefined;
+    if (!user?.sub) return;
+
+    const session = await this.prisma.tableSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        guests: { select: { id: true } },
+        restaurantId: true,
+      },
+    });
+    if (!session) return;
+
+    if (user.role === 'GUEST') {
+      const isMember = session.guests.some((g) => g.id === user.sub);
+      if (!isMember) return;
+    } else if (user.restaurantId && user.restaurantId !== session.restaurantId) {
+      return;
+    }
+
     void client.join(`session_${sessionId}`);
   }
 
