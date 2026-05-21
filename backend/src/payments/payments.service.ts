@@ -207,6 +207,7 @@ export class PaymentsService {
           where: { status: { not: 'CANCELLED' } },
           include: { items: { include: { menuItem: true } } },
         },
+        bill: true,
         payments: true,
       },
       orderBy: { openedAt: 'asc' },
@@ -216,13 +217,11 @@ export class PaymentsService {
   async getCashierReport(restaurantId: string, date?: string) {
     const where: any = { restaurantId, status: 'PAID' };
 
-    if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(startDate);
-      endDate.setHours(23, 59, 59, 999);
-      where.createdAt = { gte: startDate, lte: endDate };
-    }
+    const startDate = new Date(date ?? new Date());
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+    where.createdAt = { gte: startDate, lte: endDate };
 
     const payments = await this.prisma.payment.findMany({
       where,
@@ -256,6 +255,10 @@ export class PaymentsService {
       totalCash,
       totalDigital,
       totalCredit: byMethod.STORE_CREDIT,
+      totalServiceCharges: payments.reduce(
+        (acc, p) => acc + p.serviceCharge,
+        0,
+      ),
       count: payments.length,
     };
   }

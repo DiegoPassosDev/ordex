@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import {
   Injectable,
   NotFoundException,
@@ -23,27 +24,49 @@ export class SessionsService {
       where: { tableId: dto.tableId, status: { not: 'CLOSED' } },
     });
 
-    // Se já existe sessão aberta, vincula o guest (caso ainda não esteja) e retorna
     if (existing) {
+      const updateData: any = {};
       if (dto.guestId) {
+        updateData.guests = { connect: { id: dto.guestId } };
+      }
+      if (dto.guestName && !dto.guestId) {
+        const email = `mesa-${Date.now()}@local`;
+        const guest = await this.prisma.guest.create({
+          data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
+        });
+        updateData.guests = { connect: { id: guest.id } };
+      }
+      if (dto.waiterId) {
+        updateData.waiterId = dto.waiterId;
+      }
+      if (Object.keys(updateData).length > 0) {
         await this.prisma.tableSession.update({
           where: { id: existing.id },
-          data: { guests: { connect: { id: dto.guestId } } },
+          data: updateData,
         });
       }
-      return existing;
+      return this.findOne(existing.id);
+    }
+
+    let guestId = dto.guestId;
+    if (dto.guestName && !guestId) {
+      const email = `mesa-${Date.now()}@local`;
+      const guest = await this.prisma.guest.create({
+        data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
+      });
+      guestId = guest.id;
     }
 
     const session = await this.prisma.tableSession.create({
       data: {
         tableId: dto.tableId,
         restaurantId: dto.restaurantId,
-        // Conecta o guest na criação, se informado
-        ...(dto.guestId && {
-          guests: { connect: { id: dto.guestId } },
+        ...(guestId && {
+          guests: { connect: { id: guestId } },
         }),
+        ...(dto.waiterId && { waiterId: dto.waiterId }),
       },
-      include: { table: true },
+      include: { table: true, waiter: true, guests: true },
     });
 
     this.gateway.notifyTableSessionUpdate(dto.restaurantId, session);
@@ -141,6 +164,7 @@ export class SessionsService {
         serviceCharge: serviceChargeAmount,
         total,
         status: 'PENDING',
+        preferredPaymentMethod: dto.preferredPaymentMethod,
       },
     });
 

@@ -47,8 +47,21 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(_client: Socket) {
-    // cleanup se necessário
+  handleDisconnect(client: Socket) {
+    const user = client.data.user as SocketUser | undefined;
+    if (user?.role === 'WAITER' && user.restaurantId && user.sub) {
+      const waiters = OrdersGateway.activeWaiters.get(user.restaurantId);
+      if (waiters) {
+        const entry = waiters.get(user.sub);
+        if (entry === client.id) {
+          waiters.delete(user.sub);
+        }
+        if (waiters.size === 0) {
+          OrdersGateway.activeWaiters.delete(user.restaurantId);
+        }
+        this.updateActiveWaiters(user.restaurantId);
+      }
+    }
   }
 
   // Cliente entra na sala da sessão da mesa
@@ -96,6 +109,14 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     void client.join(`restaurant_${restaurantId}`);
+
+    if (user.role === 'WAITER' && user.sub) {
+      const waiters =
+        OrdersGateway.activeWaiters.get(restaurantId) ?? new Map();
+      waiters.set(user.sub, client.id);
+      OrdersGateway.activeWaiters.set(restaurantId, waiters);
+      this.updateActiveWaiters(restaurantId);
+    }
   }
 
   // Notifica novo pedido para o restaurante
@@ -147,6 +168,18 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .to(`session_${sessionId}`)
       .emit('session_closed_by_manager', { tableNumber: data.tableNumber });
+  }
+
+    // ── Garçons ativos (online) ───────────────────────────────────────────────
+
+  private static activeWaiters = new Map<string, Map<string, string>>();
+  // restaurantId -> Map<userId, socketId>
+
+  private updateActiveWaiters(restaurantId: string) {
+    const count = OrdersGateway.activeWaiters.get(restaurantId)?.size ?? 0;
+    this.server
+      .to(`restaurant_${restaurantId}`)
+      .emit('active_waiters_updated', count);
   }
 
   // ── Autorização de acesso à mesa ──────────────────────────────────────────
