@@ -1,17 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { ordersService } from "@/services/orders.service";
-import { useSocket } from "@/hooks/useSocket";
-import { Order } from "@/types";
 import { ChefHat, Clock, CheckCheck, Flame, Loader2 } from "lucide-react";
-import { CustomToaster, toast } from "@/components/ui/Toast";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useNotifications } from "@/hooks/useNotifications";
-import { useAuthStore } from "@/store/auth.store";
-
-const RESTAURANT_ID = "f4385ae5-6187-40f8-97b4-d289d47dc441";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
+import { CustomToaster } from "@/components/ui/Toast";
+import { useKitchenPage } from "./useKitchenPage";
 
 function getElapsedMinutes(date: string) {
   return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
@@ -20,7 +14,6 @@ function getElapsedMinutes(date: string) {
 function ElapsedTimer({ date }: { date: string }) {
   const [minutes, setMinutes] = useState(0);
   const [mounted, setMounted] = useState(false);
-  
 
   useEffect(() => {
     setMounted(true);
@@ -53,77 +46,15 @@ function ElapsedTimer({ date }: { date: string }) {
 }
 
 export default function KitchenPage() {
-  useRequireAuth(["KITCHEN", "BAR"]);
-  const employee = useAuthStore((s) => s.employee);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
-  const { addNotification } = useNotifications();
+  const p = useKitchenPage();
 
-  useEffect(() => {
-    setMounted(true);
-    loadOrders();
-  }, []);
-
-  // WebSocket — recebe novos pedidos em tempo real
-  useSocket(
-    { type: "restaurant", id: RESTAURANT_ID },
-    {
-      new_order: (order: Order) => {
-        setOrders((prev) => {
-          const exists = prev.find((o) => o.id === order.id);
-          if (exists) return prev;
-          return [order, ...prev];
-        });
-        addNotification(
-          "new_order",
-          "Novo Pedido para Preparo",
-          `Mesa ${order.session?.table?.number} enviou um novo pedido`,
-          order.session?.table?.number,
-        );
-        toast.success(`Novo pedido — Mesa ${order.session?.table?.number}!`);
-      },
-      order_status_updated: (order: Order) => {
-        setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
-      },
-    },
-  );
-
-  async function loadOrders() {
-    try {
-      setLoading(true);
-      const data = await ordersService.getByRestaurant(RESTAURANT_ID);
-      const active = data.filter(
-        (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
-      );
-      setOrders(active);
-    } catch {
-      toast.error("Erro ao carregar pedidos.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function updateStatus(id: string, status: string) {
-    try {
-      await ordersService.updateStatus(id, status);
-      setOrders((prev) =>
-        prev.map((o) => (o.id === id ? { ...o, status: status as any } : o)),
-      );
-    } catch {
-      toast.error("Erro ao atualizar status.");
-    }
-  }
-
-  const waiting = orders.filter((o) => o.status === "WAITING");
-  const preparing = orders.filter((o) => o.status === "PREPARING");
-  const ready = orders.filter((o) => o.status === "READY");
+  if (!p.mounted) return null;
 
   const columns = [
     {
       title: "Aguardando",
       status: "WAITING",
-      orders: waiting,
+      orders: p.waiting,
       color: "text-yellow-400",
       bg: "bg-yellow-500/10",
       border: "border-yellow-500/30",
@@ -133,7 +64,7 @@ export default function KitchenPage() {
     {
       title: "Em Preparo",
       status: "PREPARING",
-      orders: preparing,
+      orders: p.preparing,
       color: "text-blue-400",
       bg: "bg-blue-500/10",
       border: "border-blue-500/30",
@@ -143,7 +74,7 @@ export default function KitchenPage() {
     {
       title: "Pronto",
       status: "READY",
-      orders: ready,
+      orders: p.ready,
       color: "text-green-400",
       bg: "bg-green-500/10",
       border: "border-green-500/30",
@@ -151,8 +82,6 @@ export default function KitchenPage() {
       action: null,
     },
   ];
-
-  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
@@ -166,7 +95,7 @@ export default function KitchenPage() {
           </div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-white">
-              {employee?.role === "BAR" ? "Bar" : "Cozinha"} — Ordex
+              {p.employee?.role === "BAR" ? "Bar" : "Cozinha"} — Ordex
             </h1>
             <p className="text-gray-400 text-xs md:text-sm">
               Painel de pedidos em tempo real
@@ -175,28 +104,25 @@ export default function KitchenPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {loading && (
+          {p.loading && (
             <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
           )}
           <div className="flex items-center gap-2 bg-gray-800 px-3 py-2 md:px-4 rounded-xl">
             <Flame className="w-4 h-4 text-orange-400 shrink-0" />
             <span className="text-white text-xs md:text-sm font-medium">
               <span className="hidden sm:inline">
-                {waiting.length + preparing.length} pedidos ativos
+                {p.waiting.length + p.preparing.length} pedidos ativos
               </span>
               <span className="sm:hidden">
-                {waiting.length + preparing.length} ativos
+                {p.waiting.length + p.preparing.length} ativos
               </span>
             </span>
           </div>
+          <ThemeToggle />
         </div>
       </div>
 
-      {/* Colunas Kanban
-          — mobile:         1 coluna empilhada
-          — tablet (sm):    cards em 2 colunas dentro de cada seção
-          — desktop (md+):  3 colunas kanban lado a lado
-      */}
+      {/* Colunas Kanban */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {columns.map((col) => (
           <div key={col.status}>
@@ -226,7 +152,7 @@ export default function KitchenPage() {
               )}
 
               {col.orders.map((order) => {
-                const isLate = mounted
+                const isLate = p.mounted
                   ? getElapsedMinutes(order.createdAt) >= 15
                   : false;
 
@@ -284,7 +210,7 @@ export default function KitchenPage() {
                         size="sm"
                         icon={col.action.next === "READY" ? CheckCheck : Flame}
                         className="w-full"
-                        onClick={() => updateStatus(order.id, col.action!.next)}
+                        onClick={() => p.updateStatus(order.id, col.action!.next)}
                       >
                         {col.action.label}
                       </Button>
