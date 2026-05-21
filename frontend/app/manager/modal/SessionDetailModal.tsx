@@ -4,7 +4,7 @@ import { Loader2, X, UserCheck, Clock, DollarSign, Users, AlertCircle } from "lu
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { TableSession, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
-import type { DashboardSession } from "./useManagerDashboard";
+import type { DashboardSession } from "../useManagerDashboard";
 
 interface Props {
   session: DashboardSession;
