@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -82,6 +83,16 @@ export class EmployeesService {
 
   async update(id: string, dto: UpdateEmployeeDto) {
     await this.findOne(id);
+
+    if (dto.email) {
+      const existing = await this.prisma.employee.findUnique({
+        where: { email: dto.email },
+      });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('E-mail já cadastrado.');
+      }
+    }
+
     return this.prisma.employee.update({
       where: { id },
       data: dto,
@@ -120,6 +131,7 @@ export class EmployeesService {
       employee: {
         id: employee.id,
         name: employee.name,
+        email: employee.email,
         role: employee.role,
         restaurantId: employee.restaurantId,
       },
