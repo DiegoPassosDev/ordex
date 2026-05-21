@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/store/auth.store";
+import { api } from "@/lib/api";
 import { sessionsService } from "@/services/sessions.service";
 import { ordersService } from "@/services/orders.service";
 import { useSocket } from "@/hooks/useSocket";
 import { useAppModal } from "@/context/AppModalContext";
-import { TableSession, Order, Employee, Guest } from "@/types";
+import { TableSession, Order, Employee, Guest, Table } from "@/types";
 
 export type DashboardSession = TableSession & {
   guests?: Guest[];
@@ -20,8 +21,11 @@ export function useManagerDashboard() {
 
   const [sessions, setSessions] = useState<DashboardSession[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [tables, setTables] = useState<Table[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalServiceCharges, setTotalServiceCharges] = useState(0);
+  const [activeWaitersCount, setActiveWaitersCount] = useState(0);
   const [selectedSession, setSelectedSession] =
     useState<DashboardSession | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -32,14 +36,19 @@ export function useManagerDashboard() {
     async (showSpinner = true) => {
       try {
         if (showSpinner) setLoading(true);
-        const [sessionsResponse, ordersResponse] = await Promise.all([
-          sessionsService.getActiveByRestaurant(restaurantId),
-          ordersService.getByRestaurant(restaurantId),
-        ]);
+        const [sessionsResponse, ordersResponse, reportResponse, tablesResponse] =
+          await Promise.all([
+            sessionsService.getActiveByRestaurant(restaurantId),
+            ordersService.getByRestaurant(restaurantId),
+            api.get(`/payments/restaurant/${restaurantId}/report`),
+            api.get(`/tables/restaurant/${restaurantId}`),
+          ]);
         const sessionsData = sessionsResponse as DashboardSession[];
         const ordersData = ordersResponse as Order[];
         setSessions(sessionsData);
         setRecentOrders(ordersData);
+        setTables(tablesResponse.data as Table[]);
+        setTotalServiceCharges(reportResponse.data?.totalServiceCharges ?? 0);
         const waiters = sessionsData
           .map((s) => s.waiter)
           .filter((waiter): waiter is Employee => Boolean(waiter))
@@ -48,6 +57,7 @@ export function useManagerDashboard() {
               arr.findIndex((item) => item.id === waiter.id) === index,
           );
         setEmployees(waiters);
+        setActiveWaitersCount((prev) => prev || waiters.length);
         setSelectedSession((current) => {
           if (!current) return current;
           return (
@@ -78,6 +88,8 @@ export function useManagerDashboard() {
       new_order: () => loadData(false),
       order_status_updated: () => loadData(false),
       bill_requested: () => loadData(false),
+      active_waiters_updated: (count: number) =>
+        setActiveWaitersCount(count),
     },
   );
 
@@ -118,6 +130,10 @@ export function useManagerDashboard() {
         variant: "error",
       });
     }
+  }
+
+  function getTableSession(tableId: string) {
+    return sessions.find((s) => s.tableId === tableId && s.status !== "CLOSED") ?? null;
   }
 
   function getSessionStatus(session: TableSession): "free" | "open" | "bill" {
@@ -194,9 +210,13 @@ export function useManagerDashboard() {
   return {
     restaurantId,
     sessions,
+    tables,
     openSessions,
     todayOrders,
     employees,
+    totalServiceCharges,
+    activeWaitersCount,
+    getTableSession,
     loading,
     selectedSession,
     setSelectedSession,

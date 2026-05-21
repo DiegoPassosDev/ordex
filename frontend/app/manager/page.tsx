@@ -10,6 +10,7 @@ import {
   Users,
   UtensilsCrossed,
   TrendingUp,
+  Percent,
   Settings,
   ChefHat,
   Package,
@@ -21,8 +22,8 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { useManagerDashboard } from "./useManagerDashboard";
-import { SessionDetailModal } from "./SessionDetailModal";
-import { CloseConfirmModal } from "./CloseConfirmModal";
+import { SessionDetailModal } from "./modal/SessionDetailModal";
+import { CloseConfirmModal } from "./modal/CloseConfirmModal";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -67,10 +68,11 @@ export default function ManagerDashboard() {
     restaurantId,
     openSessions,
     todayOrders,
-    employees,
     loading,
     selectedSession,
     setSelectedSession,
+    tables,
+    getTableSession,
     cancelling,
     showCloseConfirm,
     setShowCloseConfirm,
@@ -85,6 +87,8 @@ export default function ManagerDashboard() {
     getGuestName,
     totalRevenue,
     activeOrders,
+    totalServiceCharges,
+    activeWaitersCount,
   } = useManagerDashboard();
 
   return (
@@ -105,7 +109,7 @@ export default function ManagerDashboard() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
             <MetricCard
               title="Mesas Abertas"
               value={openSessions.length}
@@ -125,8 +129,14 @@ export default function ManagerDashboard() {
               color="green"
             />
             <MetricCard
+              title="Taxa de Serviço"
+              value={`R$ ${totalServiceCharges.toFixed(2)}`}
+              icon={Percent}
+              color="yellow"
+            />
+            <MetricCard
               title="Garçons Ativos"
-              value={employees.length}
+              value={activeWaitersCount}
               icon={Users}
               color="purple"
             />
@@ -153,47 +163,59 @@ export default function ManagerDashboard() {
                     </span>
                   </div>
                 </CardHeader>
-                {openSessions.length === 0 && !loading && (
+                {tables.length === 0 && !loading && (
                   <p className="text-gray-500 text-sm text-center py-8">
-                    Nenhuma mesa ativa no momento
+                    Nenhuma mesa cadastrada
                   </p>
                 )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-5 gap-3">
-                  {openSessions.map((session) => {
-                    const status = getSessionStatus(session);
-                    const config = tableStatusConfig[status];
-                    const total = getSessionTotal(session);
-                    return (
-                      <div
-                        key={session.id}
-                        onClick={() => setSelectedSession(session)}
-                        className={`rounded-2xl border-2 p-3 cursor-pointer hover:brightness-110 transition-all duration-150 ${config.bg} ${config.border}`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-bold text-gray-100">
-                            Mesa {session.table?.number}
-                          </span>
-                          <span className={`w-2 h-2 rounded-full ${config.dot}`} />
-                        </div>
-                        <p className={`text-xs font-medium ${config.text}`}>
-                          {config.label}
-                        </p>
-                        {session.guests && session.guests.length > 0 && (
-                          <p className="text-xs font-medium text-gray-200 truncate">
-                            {session.guests[0].name?.split(" ")[0] ??
-                              session.guests[0].email}
+                  {[...tables]
+                    .sort((a, b) => a.number - b.number)
+                    .map((table) => {
+                      const session = getTableSession(table.id);
+                      const status = !session
+                        ? "free"
+                        : session.status === "REQUESTING_BILL"
+                          ? "bill"
+                          : "open";
+                      const config = tableStatusConfig[status];
+                      const total = session ? getSessionTotal(session) : 0;
+                      return (
+                        <div
+                          key={table.id}
+                          onClick={() => session && setSelectedSession(session)}
+                          className={`rounded-2xl border-2 p-3 flex flex-col min-h-[155px] ${session ? "cursor-pointer hover:brightness-110" : ""} transition-all duration-150 ${config.bg} ${config.border}`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-sm font-bold text-gray-100">
+                              Mesa {table.number}
+                            </span>
+                            <span className={`w-2 h-2 rounded-full ${config.dot}`} />
+                          </div>
+                          <p className={`text-xs font-medium ${config.text}`}>
+                            {config.label}
                           </p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1 truncate">
-                          {session.waiter?.name || "Sem garçom"}
-                        </p>
-                        <p className="text-xs font-semibold text-gray-200 mt-1">
-                          R$ {total.toFixed(2)}
-                        </p>
-                      </div>
-                    );
-                  })}
+                          {session?.guests && session.guests.length > 0 && (
+                            <p className="text-xs font-medium text-gray-200 truncate">
+                              Cliente: {session.guests[0].name?.split(" ")[0] ??
+                                session.guests[0].email}
+                            </p>
+                          )}
+                          {session && (
+                            <>
+                              <p className="text-xs text-gray-400 mt-1 truncate">
+                                Garçom: {session.waiter?.name || "Sem garçom"}
+                              </p>
+                              <p className="text-xs font-semibold text-gray-200 mt-1">
+                                R$ {total.toFixed(2)}
+                              </p>
+                            </>
+                          )}
+                          {!session && <div className="flex-1" />}
+                        </div>
+                      );
+                    })}
                 </div>
               </Card>
             </div>

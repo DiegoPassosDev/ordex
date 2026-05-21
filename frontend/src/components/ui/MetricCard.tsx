@@ -5,7 +5,7 @@ interface MetricCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  color: 'orange' | 'blue' | 'green' | 'purple';
+  color: 'orange' | 'blue' | 'green' | 'purple' | 'yellow';
   subtitle?: string;
 }
 
@@ -14,6 +14,7 @@ const colorMap = {
   blue:   { bg: 'bg-blue-500/15',   icon: 'text-blue-400',   ring: 'ring-blue-500/20'   },
   green:  { bg: 'bg-green-500/15',  icon: 'text-green-400',  ring: 'ring-green-500/20'  },
   purple: { bg: 'bg-purple-500/15', icon: 'text-purple-400', ring: 'ring-purple-500/20' },
+  yellow: { bg: 'bg-yellow-500/15', icon: 'text-yellow-400', ring: 'ring-yellow-500/20' },
 };
 
 export function MetricCard({ title, value, icon: Icon, color, subtitle }: MetricCardProps) {

@@ -299,7 +299,7 @@ export default function TablesPage() {
                     return (
                       <div
                         key={table.id}
-                        className={`rounded-2xl border-2 p-3 sm:p-4 transition-all ${config.bg} ${config.border}`}
+                        className={`rounded-2xl border-2 p-3 sm:p-4 flex flex-col min-h-[170px] transition-all ${config.bg} ${config.border}`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-bold text-gray-100">
@@ -324,7 +324,8 @@ export default function TablesPage() {
                             </p>
                           </>
                         )}
-                        <div className="flex items-center gap-1 mt-3">
+                        {!session && <div className="flex-1" />}
+                        <div className="flex items-center gap-1 mt-auto pt-3">
                           <button
                             onClick={() => openQrModal(table.id)}
                             className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-400 hover:text-white transition-all text-xs"
