@@ -57,7 +57,16 @@ export function useTablePage() {
   const [tab, setTab] = useState<Tab>("menu");
   const [showCart, setShowCart] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalState, setProfileModalState] = useState<"closed" | "open" | "closing">("closed");
+
+  function openProfileModal() {
+    setProfileModalState("open");
+  }
+
+  function closeProfileModal() {
+    setProfileModalState("closing");
+    setTimeout(() => setProfileModalState("closed"), 300);
+  }
   const [scanning, setScanning] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -511,7 +520,6 @@ export function useTablePage() {
       if (sessionId && guest?.id) {
         const session = await sessionsService.getOne(sessionId);
         if (session.status !== "CLOSED") {
-          // ✅ Apenas sai da sessão, não fecha para todos
           await sessionsService.leaveSession(sessionId, guest.id);
         }
       }
@@ -519,8 +527,8 @@ export function useTablePage() {
     } finally {
       setLoggingOut(false);
     }
-    logout();
     router.push("/login/customer");
+    logout();
   }
 
   function handleToggleNotifications() {
@@ -587,8 +595,9 @@ export function useTablePage() {
     setShowCart,
     showLogoutModal,
     setShowLogoutModal,
-    showProfileModal,
-    setShowProfileModal,
+    profileModalState,
+    openProfileModal,
+    closeProfileModal,
     scanning,
     setScanning,
     confirmed,

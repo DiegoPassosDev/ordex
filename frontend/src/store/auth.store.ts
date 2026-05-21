@@ -30,6 +30,7 @@ interface AuthState {
     sessionId?: string,
   ) => void;
   setEmployeeAuth: (token: string, employee: Employee) => void;
+  updateEmployee: (data: Partial<Employee>) => void;
   setSessionId: (sessionId: string) => void;
   setTableId: (tableId: string, restaurantId?: string) => void;
   setTableNumber: (number: string) => void;
@@ -91,6 +92,28 @@ export const useAuthStore = create<AuthState>()(
             },
           }),
         );
+      },
+
+      updateEmployee: (data) => {
+        set((state) => {
+          if (!state.employee) return state;
+          const updated = { ...state.employee, ...data };
+          setCookie(
+            JSON.stringify({
+              state: {
+                authenticated: true,
+                guest: null,
+                employee: {
+                  id: updated.id,
+                  name: updated.name,
+                  role: updated.role,
+                  restaurantId: updated.restaurantId,
+                },
+              },
+            }),
+          );
+          return { employee: updated };
+        });
       },
 
       setSessionId: (sessionId) => set({ sessionId }),

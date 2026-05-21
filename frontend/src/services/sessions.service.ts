@@ -2,11 +2,19 @@ import { api } from "@/lib/api";
 import type { Table } from "@/types";
 
 export const sessionsService = {
-  async open(tableId: string, restaurantId: string, guestId?: string) {
+  async open(
+    tableId: string,
+    restaurantId: string,
+    guestId?: string,
+    guestName?: string,
+    waiterId?: string,
+  ) {
     const { data } = await api.post("/sessions", {
       tableId,
       restaurantId,
       guestId,
+      guestName,
+      waiterId,
     });
     return data;
   },

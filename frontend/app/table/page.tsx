@@ -24,7 +24,7 @@ import {
 import { CustomToaster } from "@/components/ui/Toast";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
-import { BillRequestModal } from "./BillRequestModal";
+import { BillRequestModal } from "./modal/BillRequestModal";
 import { Receipt } from "lucide-react";
 import {
   WaitingForAccessScreen,
@@ -305,7 +305,7 @@ function TablePageInner() {
           </div>
         )}
 
-      {!p.hasTable && !p.scanning && (
+      {!p.hasTable && !p.scanning && !p.loggingOut && (
         <div className="flex flex-col items-center justify-center px-6 pt-16 pb-32 gap-6">
           <div className="w-full bg-gray-800 border border-gray-700 rounded-3xl p-8 flex flex-col items-center gap-5 text-center">
             <div className="w-20 h-20 rounded-3xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
@@ -363,7 +363,7 @@ function TablePageInner() {
       )}
 
       {/* ── Scanner ─────────────────────────────────────────────────────── */}
-      {!p.hasTable && p.scanning && (
+      {!p.hasTable && p.scanning && !p.loggingOut && (
         <div className="flex flex-col items-center px-6 pt-8 pb-32 gap-5">
           <div className="text-center">
             <h2 className="text-lg font-bold text-white mb-1">
@@ -603,7 +603,7 @@ function TablePageInner() {
             </button>
 
             <button
-              onClick={() => p.setShowProfileModal(true)}
+              onClick={() => p.openProfileModal()}
               className="flex-1 flex flex-col items-center justify-center gap-1 text-gray-500"
             >
               <User className="w-5 h-5" />
@@ -719,71 +719,93 @@ function TablePageInner() {
       )}
 
       {/* ── Modal perfil ────────────────────────────────────────────────── */}
-      {p.showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-end">
+      {p.profileModalState !== "closed" && (
+        <>
           <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => p.setShowProfileModal(false)}
+            className={`fixed inset-0 z-50 bg-black/60 ${
+              p.profileModalState === "open"
+                ? "animate-fade-in"
+                : "animate-fade-out"
+            }`}
+            onClick={p.closeProfileModal}
           />
-          <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white text-lg">Perfil</h3>
-              <button onClick={() => p.setShowProfileModal(false)}>
-                <X className="w-5 h-5 text-gray-400" />
+          <div
+            className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center ${
+              p.profileModalState === "open"
+                ? "animate-slide-up"
+                : "animate-slide-down"
+            }`}
+          >
+            <div className="w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="font-bold text-white text-lg">Perfil</h3>
+                <button onClick={p.closeProfileModal}>
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
+                <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+                  <span className="text-white font-bold">
+                    {p.guest?.name
+                      ?.split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase() || "?"}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-white truncate">
+                    {p.guest?.name || "Cliente"}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {p.guest?.email}
+                  </p>
+                </div>
+              </div>
+              {p.hasTable && (
+                <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-700/30 rounded-xl">
+                  <BadgeCheck className="w-4 h-4 text-orange-400 shrink-0" />
+                  <p className="text-sm text-gray-300">
+                    Mesa{" "}
+                    <span className="font-semibold text-white">
+                      {p.tableNumber}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
+                <span className="text-sm text-gray-300">Tema</span>
+                <ThemeToggle />
+              </div>
+              <button
+                onClick={() => {
+                  p.closeProfileModal();
+                  setTimeout(() => p.setShowLogoutModal(true), 300);
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair da conta
               </button>
             </div>
-            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
-              <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                <span className="text-white font-bold">
-                  {p.guest?.name
-                    ?.split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase() || "?"}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-white truncate">
-                  {p.guest?.name || "Cliente"}
-                </p>
-                <p className="text-xs text-gray-400 truncate">
-                  {p.guest?.email}
-                </p>
-              </div>
-            </div>
-            {p.hasTable && (
-              <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-700/30 rounded-xl">
-                <BadgeCheck className="w-4 h-4 text-orange-400 shrink-0" />
-                <p className="text-sm text-gray-300">
-                  Mesa{" "}
-                  <span className="font-semibold text-white">
-                    {p.tableNumber}
-                  </span>
-                </p>
-              </div>
-            )}
+          </div>
+        </>
+      )}
 
-            <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
-              <span className="text-sm text-gray-300">Tema</span>
-              <ThemeToggle />
-            </div>
-            <button
-              onClick={() => {
-                p.setShowProfileModal(false);
-                p.setShowLogoutModal(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair da conta
-            </button>
+      {/* ── Overlay de logout ────────────────────────────────────────────── */}
+      {p.loggingOut && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+            <p className="text-sm text-gray-400">Saindo...</p>
           </div>
         </div>
       )}
 
       {/* ── Modal logout ────────────────────────────────────────────────── */}
-      {p.showLogoutModal && (
+      {p.showLogoutModal && !p.loggingOut && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <div
             className="absolute inset-0 bg-black/60"
