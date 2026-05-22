@@ -47,6 +47,7 @@ model TableSession {
   tableId      String
   restaurantId String
   waiterId     String?
+  guestLabel   String?
   status       TableSessionStatus @default(OPEN)
   openedAt     DateTime           @default(now())
   closedAt     DateTime?
@@ -71,14 +72,13 @@ model TableAccessRequest {
   id          String   @id @default(uuid())
   sessionId   String
   guestId     String                    // quem está pedindo acesso
-  ownerId     String                    // dono da sessão (primeiro guest)
+  ownerId     String                    // dono da sessão (pode ser Guest ID ou Employee ID)
   status      AccessRequestStatus @default(PENDING)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   session     TableSession @relation(fields: [sessionId], references: [id])
-  guest       Guest        @relation("AccessRequests",   fields: [guestId],  references: [id])
-  owner       Guest        @relation("AccessRequestsOwned", fields: [ownerId], references: [id])
+  guest       Guest        @relation("AccessRequests", fields: [guestId], references: [id])
 }
 
 enum AccessRequestStatus {
@@ -105,7 +105,6 @@ model Guest {
   sessions     TableSession[]
   debts        CustomerDebt[]
   accessRequests      TableAccessRequest[] @relation("AccessRequests")
-  ownedAccessRequests TableAccessRequest[] @relation("AccessRequestsOwned")
 }
 
 
