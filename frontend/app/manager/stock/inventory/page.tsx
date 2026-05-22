@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useAuthStore } from "@/store/auth.store";
-import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { managerNavItems } from "@/lib/stock-nav";
 import {
-  Bell,
-  LogOut,
   Loader2,
   ArrowLeft,
   AlertTriangle,
@@ -20,11 +15,10 @@ import {
   TrendingDown,
   DollarSign,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CustomToaster, toast } from "@/components/ui/Toast";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { CustomToaster } from "@/components/ui/Toast";
 import { Header } from "@/components/layout/Header";
+import { useInventoryPage } from "./useInventoryPage";
 
 const UNIT_LABEL: Record<string, string> = {
   KG: "kg",
@@ -37,71 +31,20 @@ const UNIT_LABEL: Record<string, string> = {
 type SortKey = "name" | "quantity" | "costPerUnit" | "totalValue";
 
 export default function InventoryPage() {
-  useRequireAuth("MANAGER");
-  const { employee, clearAuth } = useAuthStore();
-  const router = useRouter();
-  const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
-
-  const [report, setReport] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortAsc, setSortAsc] = useState(true);
-  const [filterLow, setFilterLow] = useState(false);
-
-  useEffect(() => {
-    loadReport();
-  }, []);
-
-  async function loadReport() {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/stock/report/stock/${restaurantId}`);
-      setReport(data);
-    } catch {
-      toast.error("Erro ao carregar estoque.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortAsc((prev) => !prev);
-    } else {
-      setSortKey(key);
-      setSortAsc(true);
-    }
-  }
-
-  const items: any[] = report?.items ?? [];
-
-  const filtered = items
-    .filter((item) => {
-      const matchSearch = item.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchLow = filterLow
-        ? item.minQuantity > 0 && item.quantity <= item.minQuantity
-        : true;
-      return matchSearch && matchLow;
-    })
-    .sort((a, b) => {
-      let valA: any;
-      let valB: any;
-      if (sortKey === "totalValue") {
-        valA = a.quantity * a.costPerUnit;
-        valB = b.quantity * b.costPerUnit;
-      } else {
-        valA = a[sortKey];
-        valB = b[sortKey];
-      }
-      if (typeof valA === "string") {
-        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      }
-      return sortAsc ? valA - valB : valB - valA;
-    });
+  const {
+    report,
+    loading,
+    search,
+    setSearch,
+    sortKey,
+    sortAsc,
+    filterLow,
+    setFilterLow,
+    items,
+    filtered,
+    toggleSort,
+    restaurantId,
+  } = useInventoryPage();
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return null;

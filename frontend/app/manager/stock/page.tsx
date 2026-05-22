@@ -1,25 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useAuthStore } from "@/store/auth.store";
-import { api } from "@/lib/api";
 import { managerNavItems } from "@/lib/stock-nav";
 import {
   Package,
   AlertTriangle,
   TrendingDown,
   DollarSign,
-  LogOut,
   Loader2,
   ChevronRight,
   BarChart2,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CustomToaster, toast } from "@/components/ui/Toast";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { CustomToaster } from "@/components/ui/Toast";
 import { Header } from "@/components/layout/Header";
+import { useStockDashboardPage } from "./useStockDashboardPage";
 
 const UNIT_LABEL: Record<string, string> = {
   KG: "kg",
@@ -30,30 +25,7 @@ const UNIT_LABEL: Record<string, string> = {
 };
 
 export default function StockDashboard() {
-  useRequireAuth("MANAGER");
-  const { employee, clearAuth } = useAuthStore();
-  const router = useRouter();
-  const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
-
-  const [report, setReport] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadReport();
-  }, []);
-
-  async function loadReport() {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/stock/report/stock/${restaurantId}`);
-      setReport(data);
-    } catch {
-      toast.error("Erro ao carregar estoque.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { report, loading, restaurantId } = useStockDashboardPage();
 
   const stockLinks = [
     {

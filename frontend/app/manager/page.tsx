@@ -196,10 +196,12 @@ export default function ManagerDashboard() {
                           <p className={`text-xs font-medium ${config.text}`}>
                             {config.label}
                           </p>
-                          {session?.guests && session.guests.length > 0 && (
+                          {(session?.guestLabel || (session?.guests && session.guests.length > 0)) && (
                             <p className="text-xs font-medium text-gray-200 truncate">
-                              Cliente: {session.guests[0].name?.split(" ")[0] ??
-                                session.guests[0].email}
+                              Cliente: {session.guests?.[0]?.name?.split(" ")[0] ??
+                                session.guests?.[0]?.email ??
+                                session.guestLabel ??
+                                "—"}
                             </p>
                           )}
                           {session && (

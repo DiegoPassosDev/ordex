@@ -24,8 +24,10 @@ export function useKitchenPage() {
     loadOrders();
   }, []);
 
+  const restId = employee?.restaurantId || RESTAURANT_ID;
+
   useSocket(
-    { type: "restaurant", id: RESTAURANT_ID },
+    { type: "restaurant", id: restId },
     {
       new_order: (order: Order) => {
         setOrders((prev) => {
@@ -50,7 +52,7 @@ export function useKitchenPage() {
   async function loadOrders() {
     try {
       setLoading(true);
-      const data = await ordersService.getByRestaurant(RESTAURANT_ID);
+      const data = await ordersService.getByRestaurant(restId);
       const active = data.filter(
         (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
       );

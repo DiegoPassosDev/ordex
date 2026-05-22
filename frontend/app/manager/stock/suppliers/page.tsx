@@ -1,116 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useAuthStore } from "@/store/auth.store";
-import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { managerNavItems } from "@/lib/stock-nav";
 import {
   Plus,
   X,
-  Bell,
-  LogOut,
   Loader2,
   ArrowLeft,
   Phone,
   Mail,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast, { Toaster } from "react-hot-toast";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { Header } from "@/components/layout/Header";
+import { useSuppliersPage } from "./useSuppliersPage";
 
 export default function SuppliersPage() {
-  useRequireAuth("MANAGER");
-  const { employee, clearAuth } = useAuthStore();
-  const router = useRouter();
-  const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
-
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [editItem, setEditItem] = useState<any>(null);
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    document: "",
-    notes: "",
-  });
-
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  async function loadSuppliers() {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/suppliers/restaurant/${restaurantId}`);
-      setSuppliers(data);
-    } catch {
-      toast.error("Erro ao carregar fornecedores.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function openCreate() {
-    setEditItem(null);
-    setForm({ name: "", phone: "", email: "", document: "", notes: "" });
-    setShowModal(true);
-  }
-
-  function openEdit(s: any) {
-    setEditItem(s);
-    setForm({
-      name: s.name,
-      phone: s.phone || "",
-      email: s.email || "",
-      document: s.document || "",
-      notes: s.notes || "",
-    });
-    setShowModal(true);
-  }
-
-  async function handleSave() {
-    if (!form.name) {
-      toast.error("Informe o nome.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const payload = { ...form, restaurantId };
-      if (editItem) {
-        await api.patch(`/suppliers/${editItem.id}`, payload);
-        toast.success("Fornecedor atualizado!");
-      } else {
-        await api.post("/suppliers", payload);
-        toast.success("Fornecedor criado!");
-      }
-      setShowModal(false);
-      loadSuppliers();
-    } catch {
-      toast.error("Erro ao salvar fornecedor.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Remover "${name}"?`)) return;
-    try {
-      await api.delete(`/suppliers/${id}`);
-      toast.success("Fornecedor removido!");
-      loadSuppliers();
-    } catch {
-      toast.error("Erro ao remover fornecedor.");
-    }
-  }
+  const {
+    suppliers,
+    loading,
+    showModal,
+    setShowModal,
+    saving,
+    editItem,
+    form,
+    setForm,
+    restaurantId,
+    openCreate,
+    openEdit,
+    handleSave,
+    handleDelete,
+  } = useSuppliersPage();
 
   return (
     <div className="flex h-screen bg-gray-900">

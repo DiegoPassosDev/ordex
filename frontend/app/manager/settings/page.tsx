@@ -1,9 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { useAuthStore } from "@/store/auth.store";
-import { api } from "@/lib/api";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -15,15 +12,15 @@ import {
   Settings,
   ChefHat,
   Package,
-  Bell,
   LogOut,
   Loader2,
   Save,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { CustomToaster, toast } from "@/components/ui/Toast";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useAuthStore } from "@/store/auth.store";
+import { CustomToaster } from "@/components/ui/Toast";
 import { Header } from "@/components/layout/Header";
+import { useSettingsPage } from "./useSettingsPage";
 
 const navItems = [
   { href: "/manager", icon: LayoutGrid, label: "Dashboard" },
@@ -37,53 +34,9 @@ const navItems = [
 ];
 
 export default function SettingsPage() {
-  useRequireAuth("MANAGER");
-  const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
-  const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    serviceCharge: 10,
-    cancelWindowMin: 3,
-    acceptWindowMin: 2,
-  });
-
-  useEffect(() => {
-    loadRestaurant();
-  }, []);
-
-  async function loadRestaurant() {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/restaurants/${restaurantId}`);
-      setForm({
-        name: data.name,
-        serviceCharge: data.serviceCharge,
-        cancelWindowMin: data.cancelWindowMin,
-        acceptWindowMin: data.acceptWindowMin,
-      });
-    } catch {
-      toast.error("Erro ao carregar configurações.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await api.patch(`/restaurants/${restaurantId}`, form);
-      toast.success("Configurações salvas!");
-    } catch {
-      toast.error("Erro ao salvar configurações.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const { employee, clearAuth } = useAuthStore();
+  const { form, setForm, loading, saving, restaurantId, handleSave } = useSettingsPage();
 
   return (
     <div className="flex h-screen bg-gray-900">
