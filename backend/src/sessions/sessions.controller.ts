@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -37,8 +38,11 @@ export class SessionsController {
 
   @Get('table/:tableId/active')
   @Roles('GUEST', 'MANAGER', 'WAITER', 'CASHIER')
-  findActiveByTable(@Param('tableId') tableId: string) {
-    return this.sessionsService.findActiveByTable(tableId);
+  findActiveByTable(
+    @Param('tableId') tableId: string,
+    @Query('guestId') guestId?: string,
+  ) {
+    return this.sessionsService.findActiveByTable(tableId, guestId);
   }
 
   @Get(':id')
@@ -95,7 +99,7 @@ export class SessionsController {
   }
 
   @Patch('access/:requestId/respond')
-  @Roles('GUEST')
+  @Roles('GUEST', 'WAITER', 'MANAGER')
   respondAccess(
     @Param('requestId') requestId: string,
     @Body() dto: RespondTableAccessDto,

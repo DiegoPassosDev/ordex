@@ -29,13 +29,6 @@ export class SessionsService {
       if (dto.guestId) {
         updateData.guests = { connect: { id: dto.guestId } };
       }
-      if (dto.guestName && !dto.guestId) {
-        const email = `mesa-${Date.now()}@local`;
-        const guest = await this.prisma.guest.create({
-          data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
-        });
-        updateData.guests = { connect: { id: guest.id } };
-      }
       if (dto.waiterId) {
         updateData.waiterId = dto.waiterId;
       }
@@ -45,11 +38,15 @@ export class SessionsService {
           data: updateData,
         });
       }
-      return this.findOne(existing.id);
+      const updated = await this.findOne(existing.id);
+      this.gateway.notifyTableSessionUpdate(updated.restaurantId, updated);
+      return updated;
     }
 
     let guestId = dto.guestId;
-    if (dto.guestName && !guestId) {
+    // Só cria guest temporário quando NÃO há garçom envolvido
+    // (ex: cliente abrindo mesa direto pelo QR Code)
+    if (dto.guestName && !guestId && !dto.waiterId) {
       const email = `mesa-${Date.now()}@local`;
       const guest = await this.prisma.guest.create({
         data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
@@ -61,6 +58,7 @@ export class SessionsService {
       data: {
         tableId: dto.tableId,
         restaurantId: dto.restaurantId,
+        ...(dto.guestName && dto.waiterId && !guestId && { guestLabel: dto.guestName }),
         ...(guestId && {
           guests: { connect: { id: guestId } },
         }),
@@ -277,10 +275,15 @@ export class SessionsService {
     const alreadyIn = session.guests?.some((g: any) => g.id === dto.guestId);
     if (alreadyIn) throw new BadRequestException('Você já está nesta mesa.');
 
-    // O dono é o primeiro guest da sessão
-    const owner = session.guests?.[0];
-    if (!owner)
-      throw new BadRequestException('Nenhum dono encontrado para esta mesa.');
+    // Determina o owner: se não há guests, o garçom é o responsável
+    let ownerId: string;
+    if (session.guests && session.guests.length > 0) {
+      ownerId = session.guests[0].id;
+    } else if (session.waiterId) {
+      ownerId = session.waiterId;
+    } else {
+      throw new BadRequestException('Nenhum responsável encontrado para esta mesa.');
+    }
 
     // Verifica se já existe uma solicitação pendente deste guest
     const existing = await this.prisma.tableAccessRequest.findFirst({
@@ -288,13 +291,17 @@ export class SessionsService {
       include: { guest: true },
     });
     if (existing) {
-      this.gateway.notifyAccessRequest(sessionId, {
-        requestId: existing.id,
-        guestId: dto.guestId,
-        guestName: existing.guest.name,
-        tableNumber: session.table.number,
-        ownerId: owner.id,
-      });
+      this.gateway.notifyAccessRequest(
+        sessionId,
+        {
+          requestId: existing.id,
+          guestId: dto.guestId,
+          guestName: existing.guest.name,
+          tableNumber: session.table.number,
+          ownerId,
+        },
+        session.restaurantId,
+      );
 
       return existing;
     }
@@ -304,20 +311,24 @@ export class SessionsService {
       data: {
         sessionId,
         guestId: dto.guestId,
-        ownerId: owner.id,
+        ownerId,
         status: 'PENDING',
       },
       include: { guest: true },
     });
 
-    // Notifica o dono via WebSocket
-    this.gateway.notifyAccessRequest(sessionId, {
-      requestId: request.id,
-      guestId: dto.guestId,
-      guestName: request.guest.name,
-      tableNumber: session.table.number,
-      ownerId: owner.id,
-    });
+    // Notifica o responsável via WebSocket
+    this.gateway.notifyAccessRequest(
+      sessionId,
+      {
+        requestId: request.id,
+        guestId: dto.guestId,
+        guestName: request.guest.name,
+        tableNumber: session.table.number,
+        ownerId,
+      },
+      session.restaurantId,
+    );
 
     return request;
   }
@@ -349,6 +360,10 @@ export class SessionsService {
         where: { id: request.sessionId },
         data: { guests: { connect: { id: request.guestId } } },
       });
+
+      // Notifica o restaurante sobre a atualização da sessão (novo hóspede)
+      const session = await this.findOne(request.sessionId);
+      this.gateway.notifyTableSessionUpdate(session.restaurantId, session);
     }
 
     // Notifica o solicitante via WebSocket
@@ -361,14 +376,28 @@ export class SessionsService {
     return updated;
   }
 
-  async findActiveByTable(tableId: string) {
-    return this.prisma.tableSession.findFirst({
+  async findActiveByTable(tableId: string, guestId?: string) {
+    const session = await this.prisma.tableSession.findFirst({
       where: { tableId, status: { not: 'CLOSED' } },
       include: {
         table: true,
         guests: true,
       },
     });
+
+    if (!session) return null;
+
+    const isMember = guestId && session.guests?.some((g) => g.id === guestId);
+
+    if (isMember) return session;
+
+    return {
+      id: session.id,
+      guestLabel: session.guestLabel || null,
+      guests: session.guests?.length
+        ? [{ name: session.guests[0].name || 'Responsável' }]
+        : [],
+    };
   }
 
   async getPendingAccessRequests(sessionId: string) {

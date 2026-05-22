@@ -21,11 +21,15 @@ export class OrdersService {
   async create(dto: CreateOrderDto) {
     const session = await this.prisma.tableSession.findUnique({
       where: { id: dto.sessionId },
-      include: { restaurant: true },
+      include: { restaurant: true, guests: true },
     });
     if (!session) throw new NotFoundException('Sessão de mesa não encontrada.');
     if (session.status === 'CLOSED')
       throw new BadRequestException('Esta mesa já foi encerrada.');
+
+    const isMember = session.guests?.some((g) => g.id === dto.guestId);
+    if (!isMember)
+      throw new BadRequestException('Você não faz parte desta mesa.');
 
     const uniqueItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
 

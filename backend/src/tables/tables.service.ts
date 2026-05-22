@@ -36,15 +36,26 @@ export class TablesService {
     });
   }
 
-  async findAllByRestaurant(restaurantId: string) {
+  async findAllByRestaurant(restaurantId: string, available?: boolean) {
+    const where: any = { restaurantId };
+
+    if (available) {
+      where.sessions = {
+        none: { status: { not: 'CLOSED' } },
+      };
+    }
+
     return this.prisma.table.findMany({
-      where: { restaurantId },
+      where,
       orderBy: { number: 'asc' },
     });
   }
 
   async findOne(id: string) {
-    const table = await this.prisma.table.findUnique({ where: { id } });
+    let table = await this.prisma.table.findUnique({ where: { id } });
+    if (!table) {
+      table = await this.prisma.table.findUnique({ where: { qrCode: id } });
+    }
     if (!table) throw new NotFoundException('Mesa não encontrada.');
     return table;
   }

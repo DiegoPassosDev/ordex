@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TablesService } from './tables.service';
@@ -26,8 +27,14 @@ export class TablesController {
 
   @Get('restaurant/:restaurantId')
   @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
-  findAllByRestaurant(@Param('restaurantId') restaurantId: string) {
-    return this.tablesService.findAllByRestaurant(restaurantId);
+  findAllByRestaurant(
+    @Param('restaurantId') restaurantId: string,
+    @Query('available') available?: string,
+  ) {
+    return this.tablesService.findAllByRestaurant(
+      restaurantId,
+      available === 'true',
+    );
   }
 
   @Get('qr/:qrCode')
