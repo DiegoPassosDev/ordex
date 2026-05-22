@@ -9,7 +9,8 @@ export type NotificationType =
   | "bill_requested"
   | "waiter_called"
   | "low_stock"
-  | "order_cancelled";
+  | "order_cancelled"
+  | "access_request";
 
 export interface AppNotification {
   id: string;
@@ -30,6 +31,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: string; color: string }> = {
   waiter_called: { icon: "🔔", color: "text-purple-400" },
   low_stock: { icon: "⚠️", color: "text-red-400" },
   order_cancelled: { icon: "❌", color: "text-red-400" },
+  access_request: { icon: "🔑", color: "text-orange-400" },
 };
 
 function playNotificationSound() {

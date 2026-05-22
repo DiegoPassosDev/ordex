@@ -35,6 +35,7 @@ export interface TableSession {
   tableId: string;
   restaurantId: string;
   waiterId?: string;
+  guestLabel?: string;
   status: TableSessionStatus;
   openedAt: string;
   closedAt?: string;

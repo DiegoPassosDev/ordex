@@ -19,7 +19,8 @@ export type NotificationType =
   | "bill_requested"
   | "waiter_called"
   | "low_stock"
-  | "order_cancelled";
+  | "order_cancelled"
+  | "access_request";
 
 export interface AppNotification {
   id: string;
@@ -41,6 +42,7 @@ export const TYPE_CONFIG: Record<
   waiter_called: { icon: "🔔", color: "text-purple-400" },
   low_stock: { icon: "⚠️", color: "text-red-400" },
   order_cancelled: { icon: "❌", color: "text-red-400" },
+  access_request: { icon: "🔑", color: "text-orange-400" },
 };
 
 // ── Contexto ─────────────────────────────────────────────────────────────────
@@ -194,11 +196,12 @@ export function NotificationProvider({
       }
     },
     bill_requested: (data: any) => {
+      const tableNum = data?.table?.number ?? "?";
       addNotification(
         "bill_requested",
         "Conta Solicitada",
-        `Mesa ${data?.tableNumber ?? "?"} está pedindo a conta`,
-        data?.tableNumber,
+        `Mesa ${tableNum} está pedindo a conta`,
+        data?.table?.number,
       );
     },
     waiter_called: (data: any) => {
@@ -206,6 +209,14 @@ export function NotificationProvider({
         "waiter_called",
         "Garçom Solicitado",
         `Mesa ${data?.tableNumber ?? "?"}: ${data?.reason ?? "Chamando garçom"}`,
+        data?.tableNumber,
+      );
+    },
+    table_access_requested: (data: any) => {
+      addNotification(
+        "access_request",
+        "Solicitação de Acesso",
+        `Mesa ${data?.tableNumber ?? "?"} — ${data?.guestName ?? "Cliente"} quer assumir a mesa`,
         data?.tableNumber,
       );
     },

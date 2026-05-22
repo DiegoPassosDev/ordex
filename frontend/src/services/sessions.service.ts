@@ -29,6 +29,17 @@ export const sessionsService = {
     return data;
   },
 
+  async getTablesByRestaurant(
+    restaurantId: string,
+    available?: boolean,
+  ): Promise<Table[]> {
+    const params = available ? { available: "true" } : {};
+    const { data } = await api.get(`/tables/restaurant/${restaurantId}`, {
+      params,
+    });
+    return data;
+  },
+
   async getActiveByRestaurant(restaurantId: string) {
     const { data } = await api.get(
       `/sessions/restaurant/${restaurantId}/active`,
@@ -95,9 +106,12 @@ export const sessionsService = {
     return data;
   },
 
-  async getActiveSession(tableId: string) {
+  async getActiveSession(tableId: string, guestId?: string) {
     try {
-      const { data } = await api.get(`/sessions/table/${tableId}/active`);
+      const params = guestId ? { guestId } : {};
+      const { data } = await api.get(`/sessions/table/${tableId}/active`, {
+        params,
+      });
       return data;
     } catch {
       return null; // sem sessão ativa
