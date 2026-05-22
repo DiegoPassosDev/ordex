@@ -117,6 +117,10 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       OrdersGateway.activeWaiters.set(restaurantId, waiters);
       this.updateActiveWaiters(restaurantId);
     }
+
+    // Envia contagem atual para quem acabou de entrar (gestor ao dar refresh, etc.)
+    const count = OrdersGateway.activeWaiters.get(restaurantId)?.size ?? 0;
+    client.emit('active_waiters_updated', count);
   }
 
   // Notifica novo pedido para o restaurante
@@ -184,8 +188,10 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // ── Autorização de acesso à mesa ──────────────────────────────────────────
 
-  // Notifica o dono da sessão que alguém quer entrar
-  // O frontend do dono ouve 'table_access_requested'
+  // Notifica o responsável que alguém quer entrar na mesa
+  // Se o ownerId for de um guest, notifica o guest
+  // Se for de um funcionário, notifica o restaurante inteiro
+  // O frontend ouve 'table_access_requested'
   notifyAccessRequest(
     sessionId: string,
     data: {
@@ -195,11 +201,19 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       tableNumber: number;
       ownerId: string;
     },
+    restaurantId?: string,
   ) {
     this.server
       .to(`session_${sessionId}`)
       .to(`guest_${data.ownerId}`)
       .emit('table_access_requested', data);
+
+    // Notifica também o restaurante para alcançar funcionários
+    if (restaurantId) {
+      this.server
+        .to(`restaurant_${restaurantId}`)
+        .emit('table_access_requested', data);
+    }
   }
 
   // Notifica o solicitante sobre a decisão do dono
