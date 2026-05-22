@@ -198,6 +198,7 @@ export function useTablePage() {
 
         const existingSession = await sessionsService.getActiveSession(
           table.id,
+          currentGuestId,
         );
 
         if (existingSession) {
@@ -219,8 +220,13 @@ export function useTablePage() {
             }
           } else {
             // Não está — pede autorização
+            // Se a sessão não tem guests, o garçom é o responsável
             const ownerGuest = existingSession.guests?.[0];
-            setOwnerName(ownerGuest?.name?.split(" ")[0] || "o responsável");
+            setOwnerName(
+              ownerGuest?.name?.split(" ")[0] ||
+                (existingSession as any).guestLabel ||
+                "o responsável",
+            );
             setPendingSessionId(existingSession.id);
 
             await sessionsService.requestAccess(
@@ -302,10 +308,26 @@ export function useTablePage() {
     }
   }, [hasHydrated, guest?.id, waitingForAccess, pendingSessionId]);
 
-  // ── Polling ao voltar ao foco — verifica solicitações pendentes ───────────
+  // ── Polling ao voltar ao foco — verifica solicitações pendentes e se sessão foi encerrada ──
   useEffect(() => {
+    async function checkSessionStatus() {
+      const sid = sessionId || pendingSessionId;
+      if (!sid || accessDenied) return;
+
+      try {
+        // Verifica se a sessão ainda está aberta (fallback p/ quando WebSocket perdeu o evento)
+        const session = await sessionsService.getOne(sid);
+        if (session.status === "CLOSED") {
+          setSessionClosedByManager(true);
+          return;
+        }
+      } catch {
+        // sessão pode ter sido deletada
+      }
+    }
+
     async function checkPendingRequests() {
-      if (!sessionId || waitingForAccess) return;
+      if (!sessionId || accessDenied) return;
 
       try {
         const pending =
@@ -313,7 +335,6 @@ export function useTablePage() {
         if (pending && pending.length > 0) {
           const req = pending[0];
           if (req.ownerId === guest?.id) {
-            // Se já está visível na tela, não duplica notificação
             if (incomingRequest?.requestId === req.id) return;
 
             notifyAccessRequest(req.guest.name, undefined);
@@ -331,6 +352,7 @@ export function useTablePage() {
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
+        checkSessionStatus();
         checkPendingRequests();
       }
     }
@@ -338,13 +360,16 @@ export function useTablePage() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Polling periódico como fallback (a cada 30s)
-    const interval = window.setInterval(checkPendingRequests, 30_000);
+    const interval = window.setInterval(() => {
+      checkSessionStatus();
+      checkPendingRequests();
+    }, 30_000);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [sessionId, guest?.id, waitingForAccess, incomingRequest?.requestId]);
+  }, [sessionId, guest?.id, waitingForAccess, accessDenied, incomingRequest?.requestId]);
 
   // ── WebSocket — atualizações em tempo real ────────────────────────────────
   useSocket(

@@ -14,6 +14,13 @@ const RESTAURANT_FALLBACK = "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
 export type Tab = "tables" | "alerts";
 
+export interface AccessRequest {
+  requestId: string;
+  guestId: string;
+  guestName: string;
+  tableNumber: number;
+}
+
 export function useWaiterPage() {
   const { employee, clearAuth } = useAuthStore();
   const router = useRouter();
@@ -27,6 +34,7 @@ export function useWaiterPage() {
   const [mounted, setMounted] = useState(false);
   const [profileModalState, setProfileModalState] = useState<"closed" | "open" | "closing">("closed");
   const [showOpenTableModal, setShowOpenTableModal] = useState(false);
+  const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
 
   function openProfileModal() {
     setProfileModalState("open");
@@ -63,7 +71,17 @@ export function useWaiterPage() {
   useSocket(
     { type: "restaurant", id: restaurantId },
     {
-      table_session_updated: () => {
+      table_session_updated: (data: any) => {
+        if (data?.status === "CLOSED") {
+          const tableNumber = data?.table?.number || "?";
+          addNotification(
+            "bill_requested",
+            "Mesa Encerrada",
+            `Mesa ${tableNumber} foi encerrada pelo gestor`,
+            tableNumber,
+          );
+          toast(`Mesa ${tableNumber} encerrada pelo gestor`, { icon: "🔒" });
+        }
         loadSessions();
       },
       new_order: () => {
@@ -95,14 +113,31 @@ export function useWaiterPage() {
         toast(`Mesa ${data.tableNumber}: ${data.reason}`, { icon: "🔔" });
         loadSessions();
       },
-      bill_requested: () => {
+      bill_requested: (data: any) => {
+        const tableNum = data?.table?.number ?? "?";
         addNotification(
           "bill_requested",
           "Conta Solicitada",
-          "Cliente pedindo a conta!",
+          `Mesa ${tableNum} — cliente pedindo a conta`,
+          data?.table?.number,
         );
-        toast("Cliente pedindo a conta!", { icon: "💳" });
+        toast(`Mesa ${tableNum} — cliente pedindo a conta!`, { icon: "💳" });
         loadSessions();
+      },
+      table_access_requested: (data: any) => {
+        if (data.ownerId !== employee?.id) return;
+        setAccessRequest({
+          requestId: data.requestId,
+          guestId: data.guestId,
+          guestName: data.guestName,
+          tableNumber: data.tableNumber,
+        });
+        addNotification(
+          "access_request",
+          "Acesso à Mesa",
+          `${data.guestName} quer entrar na Mesa ${data.tableNumber}`,
+          data.tableNumber,
+        );
       },
     },
   );
@@ -174,6 +209,24 @@ export function useWaiterPage() {
     loadSessions();
   }
 
+  async function handleRespondAccess(approved: boolean) {
+    if (!accessRequest) return;
+    try {
+      await sessionsService.respondAccess(accessRequest.requestId, approved);
+      const name = accessRequest.guestName;
+      const table = accessRequest.tableNumber;
+      setAccessRequest(null);
+      if (approved) {
+        toast.success(`${name} entrou na Mesa ${table}!`);
+      } else {
+        toast.error(`Acesso negado para ${name}.`);
+      }
+      loadSessions();
+    } catch {
+      toast.error("Erro ao responder solicitação.");
+    }
+  }
+
   async function handleOrderPlaced() {
     await loadSessions();
     if (selectedSession) {
@@ -239,6 +292,9 @@ export function useWaiterPage() {
     closeProfileModal,
     showOpenTableModal,
     setShowOpenTableModal,
+    accessRequest,
+    setAccessRequest,
+    handleRespondAccess,
     setSelectedSession,
     setTab,
     handleAcceptTable,

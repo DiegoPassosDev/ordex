@@ -180,8 +180,9 @@ export function useManagerDashboard() {
 
   function getGuestName(session: DashboardSession | null): string | null {
     const guest = session?.guests?.[0];
-    if (!guest) return null;
-    return guest.name?.trim() || guest.email || null;
+    if (guest) return guest.name?.trim() || guest.email || null;
+    if (session?.guestLabel) return session.guestLabel;
+    return null;
   }
 
   const openSessions = sessions.filter((s) => s.status !== "CLOSED");

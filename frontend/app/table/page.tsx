@@ -162,6 +162,25 @@ function TablePageInner() {
     );
   }
 
+// ── Sessão encerrada pelo gestor (prioridade máxima) ─────────────────────
+  if (p.sessionClosedByManager) {
+    return (
+      <div className="min-h-screen bg-gray-900 w-full max-w-md mx-auto flex flex-col items-center justify-center px-8 gap-6">
+        <CustomToaster />
+        <div className="w-16 h-16 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+          <LogOut className="w-8 h-8 text-orange-400" />
+        </div>
+        <div className="text-center">
+          <h3 className="text-lg font-bold text-white">Mesa encerrada</h3>
+          <p className="text-gray-400 text-sm leading-relaxed mt-2">
+            O gestor encerrou esta mesa. Voltando para o início em 5 segundos…
+          </p>
+        </div>
+        <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
+      </div>
+    );
+  }
+
 // ── Aguardando autorização ────────────────────────────────────────────────
   if (p.waitingForAccess) {
     return <WaitingForAccessScreen ownerName={p.ownerName} />;
@@ -863,22 +882,6 @@ function TablePageInner() {
           onApprove={() => p.handleRespondAccess(true)}
           onDeny={() => p.handleRespondAccess(false)}
         />
-      )}
-
-      {/* ── Overlay mesa encerrada pelo gestor ──────────────────────────── */}
-      {p.sessionClosedByManager && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6">
-          <div className="w-full max-w-sm bg-gray-800 border border-gray-700 rounded-3xl p-6 flex flex-col items-center text-center gap-3">
-            <div className="w-16 h-16 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
-              <LogOut className="w-8 h-8 text-orange-400" />
-            </div>
-            <h3 className="text-lg font-bold text-white">Mesa encerrada</h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              O gestor encerrou esta mesa. Voltando para o início em 5 segundos…
-            </p>
-            <Loader2 className="w-5 h-5 text-orange-400 animate-spin mt-1" />
-          </div>
-        </div>
       )}
     </div>
   );

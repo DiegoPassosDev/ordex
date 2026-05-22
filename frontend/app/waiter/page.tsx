@@ -203,7 +203,7 @@ export default function WaiterPage() {
                           Mesa {session.table?.number}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {session.guests?.[0]?.name || `Mesa ${session.table?.number}`}
+                          {session.guests?.[0]?.name?.split(" ")[0] || session.guestLabel?.split(" ")[0] || `Mesa ${session.table?.number}`}
                         </p>
                       </div>
                     </div>
@@ -342,6 +342,46 @@ export default function WaiterPage() {
           onOpen={p.handleOpenTable}
           onClose={() => p.setShowOpenTableModal(false)}
         />
+      )}
+
+      {/* Modal de solicitação de acesso */}
+      {p.accessRequest && (
+        <div className="fixed inset-0 z-50 flex items-end">
+          <div className="absolute inset-0 bg-black/60" onClick={() => p.setAccessRequest(null)} />
+          <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-white text-lg">Solicitação de Acesso</h3>
+              <button onClick={() => p.setAccessRequest(null)}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-gray-700/50 rounded-2xl mb-5">
+              <User className="w-8 h-8 text-orange-400 shrink-0" />
+              <div>
+                <p className="text-white font-semibold">{p.accessRequest.guestName}</p>
+                <p className="text-sm text-gray-400">
+                  quer entrar na Mesa {p.accessRequest.tableNumber}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => p.handleRespondAccess(false)}
+                className="flex-1 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
+              >
+                Negar
+              </button>
+              <button
+                onClick={() => p.handleRespondAccess(true)}
+                className="flex-1 py-3 rounded-2xl bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition-all"
+              >
+                Aprovar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {p.profileModalState !== "closed" && (

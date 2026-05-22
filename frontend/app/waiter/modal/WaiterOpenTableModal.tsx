@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useId, useEffect } from "react";
-import { X, Camera, Loader2, User, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useId } from "react";
+import {
+  X,
+  Camera,
+  Loader2,
+  User,
+  ArrowLeft,
+  ClipboardList,
+  Table2,
+} from "lucide-react";
 import { toast } from "@/components/ui/Toast";
+import { sessionsService } from "@/services/sessions.service";
+import type { Table } from "@/types";
 
 function getTableIdFromQrValue(value: string) {
   const decodedText = value.trim();
@@ -23,16 +33,46 @@ interface WaiterOpenTableModalProps {
   onClose: () => void;
 }
 
+type Step = "choose" | "select" | "scan" | "name";
+
 export function WaiterOpenTableModal({
   restaurantId,
   waiterId,
   onOpen,
   onClose,
 }: WaiterOpenTableModalProps) {
-  const [step, setStep] = useState<"scan" | "name">("scan");
+  const [step, setStep] = useState<Step>("choose");
   const [scannedTableId, setScannedTableId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [tables, setTables] = useState<Table[]>([]);
+  const [loadingTables, setLoadingTables] = useState(false);
+
+  useEffect(() => {
+    if (step === "choose") {
+      loadAvailableTables();
+    }
+  }, [step]);
+
+  async function loadAvailableTables() {
+    setLoadingTables(true);
+    try {
+      const data = await sessionsService.getTablesByRestaurant(
+        restaurantId,
+        true,
+      );
+      setTables(data);
+    } catch {
+      toast.error("Erro ao carregar mesas.");
+    } finally {
+      setLoadingTables(false);
+    }
+  }
+
+  function handleSelectTable(table: Table) {
+    setScannedTableId(table.id);
+    setStep("name");
+  }
 
   function handleScan(tableId: string) {
     setScannedTableId(tableId);
@@ -40,10 +80,7 @@ export function WaiterOpenTableModal({
   }
 
   async function handleConfirm() {
-    if (!scannedTableId || !customerName.trim()) {
-      toast.error("Informe o nome do cliente.");
-      return;
-    }
+    if (!scannedTableId) return;
     setSaving(true);
     try {
       await onOpen(scannedTableId, customerName.trim());
@@ -56,25 +93,40 @@ export function WaiterOpenTableModal({
     }
   }
 
+  function goBack() {
+    if (step === "name") {
+      if (scannedTableId && tables.some((t) => t.id === scannedTableId)) {
+        setStep("select");
+      } else {
+        setStep("scan");
+      }
+      setScannedTableId(null);
+      setCustomerName("");
+    } else if (step === "select" || step === "scan") {
+      setStep("choose");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6 max-h-[90vh] overflow-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            {step === "name" && (
+            {step !== "choose" && (
               <button
-                onClick={() => {
-                  setStep("scan");
-                  setScannedTableId(null);
-                }}
+                onClick={goBack}
                 className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-gray-300"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <h3 className="font-bold text-white text-lg">
-              {step === "scan" ? "Abrir Mesa" : "Nome do Cliente"}
+              {step === "choose" && "Abrir Mesa"}
+              {step === "select" && "Selecionar Mesa"}
+              {step === "scan" && "Ler QR Code"}
+              {step === "name" && "Nome do Cliente"}
             </h3>
           </div>
           <button onClick={onClose}>
@@ -82,6 +134,83 @@ export function WaiterOpenTableModal({
           </button>
         </div>
 
+        {/* Step: Choose */}
+        {step === "choose" && (
+          <div className="flex flex-col gap-4 py-4">
+            <p className="text-sm text-gray-400 text-center">
+              Escolha como abrir a mesa
+            </p>
+
+            <button
+              onClick={() => setStep("select")}
+              className="flex items-center gap-4 w-full p-5 rounded-2xl bg-gray-700/50 hover:bg-gray-700 border border-gray-600 transition-all text-left"
+            >
+              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                <ClipboardList className="w-6 h-6 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-white font-semibold">Selecionar da lista</p>
+                <p className="text-sm text-gray-400">
+                  Escolha a mesa entre as disponíveis
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setStep("scan")}
+              className="flex items-center gap-4 w-full p-5 rounded-2xl bg-gray-700/50 hover:bg-gray-700 border border-gray-600 transition-all text-left"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
+                <Camera className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-white font-semibold">Ler QR Code</p>
+                <p className="text-sm text-gray-400">
+                  Escaneie o código da mesa
+                </p>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Step: Select table from list */}
+        {step === "select" && (
+          <div className="flex flex-col gap-3 py-4 max-h-[60vh] overflow-y-auto">
+            {loadingTables ? (
+              <div className="flex items-center justify-center gap-2 text-gray-400 text-sm py-8">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Carregando mesas...
+              </div>
+            ) : tables.length === 0 ? (
+              <div className="text-center py-8">
+                <Table2 className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">
+                  Nenhuma mesa disponível no momento
+                </p>
+              </div>
+            ) : (
+              tables.map((table) => (
+                <button
+                  key={table.id}
+                  onClick={() => handleSelectTable(table)}
+                  className="flex items-center gap-4 w-full p-4 rounded-2xl bg-gray-700/50 hover:bg-gray-700 border border-gray-600 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gray-600 flex items-center justify-center shrink-0">
+                    <Table2 className="w-5 h-5 text-gray-300" />
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold">
+                      Mesa {table.number}
+                    </p>
+                    <p className="text-xs text-gray-500">Disponível</p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Step: Scan QR Code */}
         {step === "scan" && (
           <div className="flex flex-col items-center gap-4 py-4">
             <p className="text-sm text-gray-400 text-center">
@@ -91,12 +220,19 @@ export function WaiterOpenTableModal({
           </div>
         )}
 
+        {/* Step: Enter customer name */}
         {step === "name" && (
           <div className="flex flex-col gap-4 py-4">
             <div className="flex items-center gap-3 p-4 bg-gray-700/50 rounded-2xl">
-              <Camera className="w-5 h-5 text-orange-400 shrink-0" />
+              {scannedTableId && tables.some((t) => t.id === scannedTableId) ? (
+                <Table2 className="w-5 h-5 text-orange-400 shrink-0" />
+              ) : (
+                <Camera className="w-5 h-5 text-orange-400 shrink-0" />
+              )}
               <div>
-                <p className="text-sm font-medium text-white">Mesa identificada</p>
+                <p className="text-sm font-medium text-white">
+                  Mesa {tables.find((t) => t.id === scannedTableId)?.number || "identificada"}
+                </p>
                 <p className="text-xs text-gray-400">
                   ID: {scannedTableId?.slice(0, 8)}...
                 </p>
@@ -105,7 +241,7 @@ export function WaiterOpenTableModal({
 
             <div>
               <label className="text-sm font-medium text-gray-300 mb-1.5 block">
-                Nome do cliente
+                Nome do cliente <span className="text-gray-500">(opcional)</span>
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -118,13 +254,13 @@ export function WaiterOpenTableModal({
                 />
               </div>
               <p className="text-xs text-gray-500 mt-1.5">
-                Apenas para identificação da mesa
+                O cliente fará o próprio check-in ao escanear o QR Code
               </p>
             </div>
 
             <button
               onClick={handleConfirm}
-              disabled={saving || !customerName.trim()}
+              disabled={saving}
               className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-all disabled:opacity-50"
             >
               {saving ? (

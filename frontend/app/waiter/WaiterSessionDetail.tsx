@@ -86,7 +86,7 @@ export function WaiterSessionDetail({
                 Mesa {session.table?.number}
               </p>
               <p className="text-xs text-gray-400">
-                {session.guests?.[0]?.name || `Mesa ${session.table?.number}`}
+                Cliente: {session.guests?.[0]?.name?.split(" ")[0] || session.guestLabel || `Mesa ${session.table?.number}`}
               </p>
             </div>
           </div>
