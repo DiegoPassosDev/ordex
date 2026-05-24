@@ -74,11 +74,6 @@ export function NotificationBell({
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-white text-sm">Notificações</h3>
-              {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-xs font-medium border border-orange-500/30">
-                  {unreadCount} nova{unreadCount > 1 ? "s" : ""}
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-1">
               {/* Toggle som */}
