@@ -11,6 +11,7 @@ import {
   Table2,
 } from "lucide-react";
 import { toast } from "@/components/ui/Toast";
+import { SlideUpModal, useSlideUpClose } from "@/components/ui/SlideUpModal";
 import { sessionsService } from "@/services/sessions.service";
 import type { Table } from "@/types";
 
@@ -35,12 +36,12 @@ interface WaiterOpenTableModalProps {
 
 type Step = "choose" | "select" | "scan" | "name";
 
-export function WaiterOpenTableModal({
+function Inner({
   restaurantId,
   waiterId,
   onOpen,
-  onClose,
 }: WaiterOpenTableModalProps) {
+  const { close } = useSlideUpClose();
   const [step, setStep] = useState<Step>("choose");
   const [scannedTableId, setScannedTableId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
@@ -85,7 +86,7 @@ export function WaiterOpenTableModal({
     try {
       await onOpen(scannedTableId, customerName.trim());
       toast.success("Mesa aberta com sucesso!");
-      onClose();
+      close();
     } catch {
       toast.error("Erro ao abrir mesa.");
     } finally {
@@ -108,31 +109,29 @@ export function WaiterOpenTableModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6 max-h-[90vh] overflow-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            {step !== "choose" && (
-              <button
-                onClick={goBack}
-                className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-gray-300"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            )}
-            <h3 className="font-bold text-white text-lg">
-              {step === "choose" && "Abrir Mesa"}
-              {step === "select" && "Selecionar Mesa"}
-              {step === "scan" && "Ler QR Code"}
-              {step === "name" && "Nome do Cliente"}
-            </h3>
-          </div>
-          <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 pb-0 mb-5">
+        <div className="flex items-center gap-2">
+          {step !== "choose" && (
+            <button
+              onClick={goBack}
+              className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-gray-300"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <h3 className="font-bold text-white text-lg">
+            {step === "choose" && "Abrir Mesa"}
+            {step === "select" && "Selecionar Mesa"}
+            {step === "scan" && "Ler QR Code"}
+            {step === "name" && "Nome do Cliente"}
+          </h3>
         </div>
+        <button onClick={close}>
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
 
         {/* Step: Choose */}
         {step === "choose" && (
@@ -272,8 +271,15 @@ export function WaiterOpenTableModal({
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </>
+  );
+}
+
+export function WaiterOpenTableModal(props: WaiterOpenTableModalProps) {
+  return (
+    <SlideUpModal onClose={props.onClose} className="p-6 max-h-[90vh] overflow-auto">
+      <Inner {...props} />
+    </SlideUpModal>
   );
 }
 

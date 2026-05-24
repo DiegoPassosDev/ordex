@@ -20,6 +20,7 @@ import {
   Plus,
 } from "lucide-react";
 import { CustomToaster } from "@/components/ui/Toast";
+import { SlideUpModal, useSlideUpClose } from "@/components/ui/SlideUpModal";
 
 const tableStatusConfig: Record<
   string,
@@ -48,6 +49,90 @@ const tableStatusConfig: Record<
   },
 };
 
+function AccessRequestContent({ p }: { p: ReturnType<typeof useWaiterPage> }) {
+  const { close } = useSlideUpClose();
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-white text-lg">Solicitação de Acesso</h3>
+        <button onClick={close}>
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+      <div className="flex items-center gap-3 p-4 bg-gray-700/50 rounded-2xl mb-5">
+        <User className="w-8 h-8 text-orange-400 shrink-0" />
+        <div>
+          <p className="text-white font-semibold">{p.accessRequest!.guestName}</p>
+          <p className="text-sm text-gray-400">
+            quer entrar na Mesa {p.accessRequest!.tableNumber}
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={() => { p.handleRespondAccess(false); close(); }}
+          className="flex-1 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
+        >
+          Negar
+        </button>
+        <button
+          onClick={() => { p.handleRespondAccess(true); close(); }}
+          className="flex-1 py-3 rounded-2xl bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition-all"
+        >
+          Aprovar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProfileContent({ p }: { p: ReturnType<typeof useWaiterPage> }) {
+  const { close } = useSlideUpClose();
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-white text-lg">Perfil</h3>
+        <button onClick={close}>
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+      <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
+        <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+          <span className="text-white font-bold">
+            {p.employee?.name
+              ?.split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase() || "?"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="font-semibold text-white truncate">
+            {p.employee?.name || "Garçom"}
+          </p>
+          <p className="text-xs text-gray-400 truncate">
+            {p.employee?.email || "Garçom"}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
+        <span className="text-sm text-gray-300">Tema</span>
+        <ThemeToggle />
+      </div>
+      <button
+        onClick={p.handleLogout}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
+      >
+        <LogOut className="w-4 h-4" />
+        Sair da conta
+      </button>
+    </div>
+  );
+}
+
 export default function WaiterPage() {
   useRequireAuth("WAITER");
   const p = useWaiterPage();
@@ -62,7 +147,6 @@ export default function WaiterPage() {
         onBack={() => p.setSelectedSession(null)}
         onAcceptTable={p.handleAcceptTable}
         onDeliverOrder={p.handleDeliverOrder}
-        onCloseBill={p.handleCloseBill}
         onOrderPlaced={p.handleOrderPlaced}
         getSessionStatus={p.getSessionStatus}
         getSessionTotal={p.getSessionTotal}
@@ -142,8 +226,8 @@ export default function WaiterPage() {
 
         <div className="grid grid-cols-3 gap-3 px-4 py-4">
           <div className="bg-gray-800 rounded-2xl border border-gray-700 p-3 flex flex-col items-center gap-1">
-            <p className="text-xl font-bold text-white">{p.sessions.length}</p>
-            <p className="text-xs text-gray-500 text-center">Mesas ativas</p>
+            <p className="text-xl font-bold text-white">{p.mySessions.length}</p>
+            <p className="text-xs text-gray-500 text-center">Suas mesas</p>
           </div>
           <div className="bg-gray-800 rounded-2xl border border-gray-700 p-3 flex flex-col items-center gap-1">
             <p className="text-xl font-bold text-green-400">
@@ -171,19 +255,18 @@ export default function WaiterPage() {
               </div>
             )}
 
-            {!p.loading && p.sessions.length === 0 && (
+            {!p.loading && p.mySessions.length === 0 && (
               <div className="text-center py-16">
                 <UtensilsCrossed className="w-10 h-10 text-gray-700 mx-auto mb-3" />
                 <p className="text-gray-500 text-sm">Nenhuma mesa ativa</p>
               </div>
             )}
 
-            {[...p.sessions].sort((a, b) => (a.table?.number || 0) - (b.table?.number || 0)).map((session) => {
+            {[...p.mySessions].sort((a, b) => (a.table?.number || 0) - (b.table?.number || 0)).map((session) => {
               const status = p.getSessionStatus(session);
               const config = tableStatusConfig[status];
               const readyOrders =
                 session.orders?.filter((o) => o.status === "READY") || [];
-              const isUnassigned = !session.waiterId;
 
               return (
                 <div
@@ -245,7 +328,7 @@ export default function WaiterPage() {
         {p.tab === "alerts" && (
           <div className="space-y-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Alertas Ativos
+              Alertas
             </p>
 
             {p.alerts === 0 && (
@@ -257,7 +340,48 @@ export default function WaiterPage() {
               </div>
             )}
 
-            {p.sessions
+            {p.availableSessions.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                  Mesas sem Garçom
+                </p>
+
+                {[...p.availableSessions].sort((a, b) => (a.table?.number || 0) - (b.table?.number || 0)).map((session) => (
+                  <div
+                    key={session.id}
+                    onClick={() => p.setSelectedSession(session)}
+                    className="bg-gray-800 rounded-2xl border border-blue-500/30 p-4 cursor-pointer hover:border-blue-400/50 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                          <span className="text-blue-400 font-bold">
+                            {session.table?.number}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-white">
+                            Mesa {session.table?.number}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {session.guests?.[0]?.name?.split(" ")[0] || session.guestLabel?.split(" ")[0] || `Mesa ${session.table?.number}`}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-600" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {p.mySessionAlerts.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Suas Mesas
+                </p>
+
+            {p.mySessions
               .filter((s) => s.orders?.some((o) => o.status === "READY"))
               .map((session) => (
                 <div
@@ -293,7 +417,7 @@ export default function WaiterPage() {
                 </div>
               ))}
 
-            {p.sessions
+            {p.mySessions
               .filter((s) => s.status === "REQUESTING_BILL")
               .map((session) => (
                 <div
@@ -322,18 +446,25 @@ export default function WaiterPage() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
           </div>
         )}
       </div>
 
       {/* Botão flutuante abrir mesa */}
-      <button
-        onClick={() => p.setShowOpenTableModal(true)}
-        className="fixed bottom-4 left-4 z-30 w-12 h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-900/40 flex items-center justify-center transition-all"
-        title="Abrir mesa para cliente"
-      >
-        <Plus className="w-5 h-5" />
-      </button>
+      <div className="fixed bottom-4 left-4 z-30 flex items-center gap-2">
+        <button
+          onClick={() => p.setShowOpenTableModal(true)}
+          className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-900/40 flex items-center justify-center transition-all"
+          title="Abrir mesa para cliente"
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+        <span className="px-3 py-1.5 rounded-full bg-orange-500/20 text-orange-400 text-xs font-medium backdrop-blur-sm">
+          Abrir mesa
+        </span>
+      </div>
 
       {p.showOpenTableModal && p.employee && (
         <WaiterOpenTableModal
@@ -346,104 +477,15 @@ export default function WaiterPage() {
 
       {/* Modal de solicitação de acesso */}
       {p.accessRequest && (
-        <div className="fixed inset-0 z-50 flex items-end">
-          <div className="absolute inset-0 bg-black/60" onClick={() => p.setAccessRequest(null)} />
-          <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6 animate-slide-up">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white text-lg">Solicitação de Acesso</h3>
-              <button onClick={() => p.setAccessRequest(null)}>
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-gray-700/50 rounded-2xl mb-5">
-              <User className="w-8 h-8 text-orange-400 shrink-0" />
-              <div>
-                <p className="text-white font-semibold">{p.accessRequest.guestName}</p>
-                <p className="text-sm text-gray-400">
-                  quer entrar na Mesa {p.accessRequest.tableNumber}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => p.handleRespondAccess(false)}
-                className="flex-1 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
-              >
-                Negar
-              </button>
-              <button
-                onClick={() => p.handleRespondAccess(true)}
-                className="flex-1 py-3 rounded-2xl bg-green-500 hover:bg-green-600 text-white font-semibold text-sm transition-all"
-              >
-                Aprovar
-              </button>
-            </div>
-          </div>
-        </div>
+        <SlideUpModal onClose={() => p.setAccessRequest(null)}>
+          <AccessRequestContent p={p} />
+        </SlideUpModal>
       )}
 
       {p.profileModalState !== "closed" && (
-        <>
-          <div
-            className={`fixed inset-0 z-50 bg-black/60 ${
-              p.profileModalState === "open"
-                ? "animate-fade-in"
-                : "animate-fade-out"
-            }`}
-            onClick={p.closeProfileModal}
-          />
-          <div
-            className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center ${
-              p.profileModalState === "open"
-                ? "animate-slide-up"
-                : "animate-slide-down"
-            }`}
-          >
-            <div className="w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="font-bold text-white text-lg">Perfil</h3>
-                <button onClick={p.closeProfileModal}>
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
-                <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                  <span className="text-white font-bold">
-                    {p.employee?.name
-                      ?.split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase() || "?"}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-white truncate">
-                    {p.employee?.name || "Garçom"}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {p.employee?.email || "Garçom"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
-                <span className="text-sm text-gray-300">Tema</span>
-                <ThemeToggle />
-              </div>
-
-              <button
-                onClick={p.handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                Sair da conta
-              </button>
-            </div>
-          </div>
-        </>
+        <SlideUpModal onClose={() => p.setProfileModalState("closed")}>
+          <ProfileContent p={p} />
+        </SlideUpModal>
       )}
     </div>
   );

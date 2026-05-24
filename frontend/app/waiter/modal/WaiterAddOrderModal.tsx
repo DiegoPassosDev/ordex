@@ -5,6 +5,7 @@ import { Plus, Minus, ShoppingCart, Loader2, X } from "lucide-react";
 import { menuService } from "@/services/menu.service";
 import { ordersService } from "@/services/orders.service";
 import { toast } from "@/components/ui/Toast";
+import { SlideUpModal, useSlideUpClose } from "@/components/ui/SlideUpModal";
 import type { Category, MenuItem } from "@/types";
 
 interface CartItem {
@@ -20,13 +21,8 @@ interface WaiterAddOrderModalProps {
   onSuccess: () => void;
 }
 
-export function WaiterAddOrderModal({
-  sessionId,
-  guestId,
-  restaurantId,
-  onClose,
-  onSuccess,
-}: WaiterAddOrderModalProps) {
+function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderModalProps) {
+  const { close } = useSlideUpClose();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -105,7 +101,7 @@ export function WaiterAddOrderModal({
       await ordersService.create(sessionId, guestId, items);
       toast.success("Pedido adicionado!");
       onSuccess();
-      onClose();
+      close();
     } catch {
       toast.error("Erro ao adicionar pedido.");
     } finally {
@@ -114,21 +110,12 @@ export function WaiterAddOrderModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl flex flex-col max-h-[85vh]">
-        <div className="flex items-center justify-between px-6 pt-6 pb-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-gray-300 hover:bg-gray-600 transition-colors"
-            >
-              ←
-            </button>
-            <h3 className="font-bold text-white text-lg">
-              Adicionar Pedido
-            </h3>
-          </div>
+    <>
+      <div className="flex items-center justify-between px-6 pt-6 pb-3 shrink-0">
+        <h3 className="font-bold text-white text-lg">
+          Adicionar Pedido
+        </h3>
+        <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <div className="flex items-center gap-1.5 bg-orange-500/20 px-3 py-1.5 rounded-full">
               <ShoppingCart className="w-3.5 h-3.5 text-orange-400" />
@@ -137,9 +124,13 @@ export function WaiterAddOrderModal({
               </span>
             </div>
           )}
+          <button onClick={close}>
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
         </div>
+      </div>
 
-        <div className="flex gap-2 px-6 pb-3 overflow-x-auto shrink-0">
+        <div className="flex gap-2 px-6 pb-3 overflow-x-auto scrollbar-hide shrink-0">
           <button
             onClick={() => setSelectedCategory("all")}
             className={`shrink-0 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
@@ -219,7 +210,7 @@ export function WaiterAddOrderModal({
                     ) : (
                       <button
                         onClick={() => addToCart(item)}
-                        className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 hover:bg-orange-500/30 transition-all"
+                        className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 hover:bg-orange-500/20 hover:brightness-110 transition-all"
                       >
                         <Plus className="w-4 h-4" />
                       </button>
@@ -247,7 +238,14 @@ export function WaiterAddOrderModal({
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </>
+  );
+}
+
+export function WaiterAddOrderModal(props: WaiterAddOrderModalProps) {
+  return (
+    <SlideUpModal onClose={props.onClose} className="flex flex-col max-h-[85vh]">
+      <Inner {...props} />
+    </SlideUpModal>
   );
 }
