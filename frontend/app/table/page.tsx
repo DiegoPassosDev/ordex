@@ -22,6 +22,7 @@ import {
   User,
 } from "lucide-react";
 import { CustomToaster } from "@/components/ui/Toast";
+import { SlideUpModal, useSlideUpClose } from "@/components/ui/SlideUpModal";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { BillRequestModal } from "./modal/BillRequestModal";
@@ -143,6 +144,140 @@ function QrScanner({ onScan }: { onScan: (tableId: string) => void }) {
       <p className="text-gray-500 text-xs text-center">
         Aponte para o QR Code da mesa
       </p>
+    </div>
+  );
+}
+
+/* ── Componentes internos dos modais ────────────────────────────────────── */
+function CartContent({ p }: { p: ReturnType<typeof useTablePage> }) {
+  const { close } = useSlideUpClose();
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-white text-lg">Seu Pedido</h3>
+        <button onClick={close}>
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+      <div className="space-y-3 mb-5">
+        {p.cart.map((item) => (
+          <div
+            key={item.id}
+            className="flex flex-col gap-2 pb-3 border-b border-gray-700 last:border-0"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => p.removeFromCart(item.id)}
+                    className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center"
+                  >
+                    <Minus className="w-3 h-3 text-gray-300" />
+                  </button>
+                  <span className="text-sm font-bold text-white w-4 text-center">
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => p.addToCart(item)}
+                    className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center"
+                  >
+                    <Plus className="w-3 h-3 text-orange-400" />
+                  </button>
+                </div>
+                <span className="text-sm text-gray-300">{item.name}</span>
+              </div>
+              <span className="text-sm font-semibold text-white">
+                R$ {(item.price * item.quantity).toFixed(2)}
+              </span>
+            </div>
+            <input
+              type="text"
+              placeholder="Observação (ex: sem cebola)"
+              value={item.notes || ""}
+              onChange={(e) => p.updateNotes(item.id, e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-gray-300 text-xs placeholder-gray-500 focus:outline-none focus:border-orange-500"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-gray-700 pt-4 mb-5">
+        <div className="flex justify-between">
+          <span className="font-semibold text-gray-300">Total</span>
+          <span className="font-bold text-orange-400 text-lg">
+            R$ {p.cartTotal.toFixed(2)}
+          </span>
+        </div>
+      </div>
+      <Button
+        icon={ShoppingCart}
+        size="lg"
+        className="w-full"
+        loading={p.loadingOrder}
+        onClick={p.confirmOrder}
+      >
+        Confirmar Pedido
+      </Button>
+    </>
+  );
+}
+
+function TableProfileContent({ p }: { p: ReturnType<typeof useTablePage> }) {
+  const { close } = useSlideUpClose();
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-white text-lg">Perfil</h3>
+        <button onClick={close}>
+          <X className="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+      <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
+        <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+          <span className="text-white font-bold">
+            {p.guest?.name
+              ?.split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase() || "?"}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <p className="font-semibold text-white truncate">
+            {p.guest?.name || "Cliente"}
+          </p>
+          <p className="text-xs text-gray-400 truncate">
+            {p.guest?.email}
+          </p>
+        </div>
+      </div>
+      {p.hasTable && (
+        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-700/30 rounded-xl">
+          <BadgeCheck className="w-4 h-4 text-orange-400 shrink-0" />
+          <p className="text-sm text-gray-300">
+            Mesa{" "}
+            <span className="font-semibold text-white">
+              {p.tableNumber}
+            </span>
+          </p>
+        </div>
+      )}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
+        <span className="text-sm text-gray-300">Tema</span>
+        <ThemeToggle />
+      </div>
+      <button
+        onClick={() => {
+          close();
+          setTimeout(() => p.setShowLogoutModal(true), 300);
+        }}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
+      >
+        <LogOut className="w-4 h-4" />
+        Sair da conta
+      </button>
     </div>
   );
 }
@@ -663,154 +798,16 @@ function TablePageInner() {
 
       {/* ── Modal carrinho ──────────────────────────────────────────────── */}
       {p.showCart && (
-        <div className="fixed inset-0 z-50 flex items-end">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => p.setShowCart(false)}
-          />
-          <div className="relative w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6 max-h-[80vh] overflow-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-white text-lg">Seu Pedido</h3>
-              <button onClick={() => p.setShowCart(false)}>
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            <div className="space-y-3 mb-5">
-              {p.cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-2 pb-3 border-b border-gray-700 last:border-0"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => p.removeFromCart(item.id)}
-                          className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center"
-                        >
-                          <Minus className="w-3 h-3 text-gray-300" />
-                        </button>
-                        <span className="text-sm font-bold text-white w-4 text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => p.addToCart(item)}
-                          className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center"
-                        >
-                          <Plus className="w-3 h-3 text-orange-400" />
-                        </button>
-                      </div>
-                      <span className="text-sm text-gray-300">{item.name}</span>
-                    </div>
-                    <span className="text-sm font-semibold text-white">
-                      R$ {(item.price * item.quantity).toFixed(2)}
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Observação (ex: sem cebola)"
-                    value={item.notes || ""}
-                    onChange={(e) => p.updateNotes(item.id, e.target.value)}
-                    className="w-full px-3 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-gray-300 text-xs placeholder-gray-500 focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-gray-700 pt-4 mb-5">
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-300">Total</span>
-                <span className="font-bold text-orange-400 text-lg">
-                  R$ {p.cartTotal.toFixed(2)}
-                </span>
-              </div>
-            </div>
-            <Button
-              icon={ShoppingCart}
-              size="lg"
-              className="w-full"
-              loading={p.loadingOrder}
-              onClick={p.confirmOrder}
-            >
-              Confirmar Pedido
-            </Button>
-          </div>
-        </div>
+        <SlideUpModal onClose={() => p.setShowCart(false)} className="p-6 max-h-[80vh] overflow-auto">
+          <CartContent p={p} />
+        </SlideUpModal>
       )}
 
       {/* ── Modal perfil ────────────────────────────────────────────────── */}
       {p.profileModalState !== "closed" && (
-        <>
-          <div
-            className={`fixed inset-0 z-50 bg-black/60 ${
-              p.profileModalState === "open"
-                ? "animate-fade-in"
-                : "animate-fade-out"
-            }`}
-            onClick={p.closeProfileModal}
-          />
-          <div
-            className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center ${
-              p.profileModalState === "open"
-                ? "animate-slide-up"
-                : "animate-slide-down"
-            }`}
-          >
-            <div className="w-full max-w-md mx-auto bg-gray-800 border-t border-gray-700 rounded-t-3xl p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="font-bold text-white text-lg">Perfil</h3>
-                <button onClick={p.closeProfileModal}>
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-700/50 rounded-2xl">
-                <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-                  <span className="text-white font-bold">
-                    {p.guest?.name
-                      ?.split(" ")
-                      .map((n: string) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase() || "?"}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-white truncate">
-                    {p.guest?.name || "Cliente"}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {p.guest?.email}
-                  </p>
-                </div>
-              </div>
-              {p.hasTable && (
-                <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-gray-700/30 rounded-xl">
-                  <BadgeCheck className="w-4 h-4 text-orange-400 shrink-0" />
-                  <p className="text-sm text-gray-300">
-                    Mesa{" "}
-                    <span className="font-semibold text-white">
-                      {p.tableNumber}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl mb-4">
-                <span className="text-sm text-gray-300">Tema</span>
-                <ThemeToggle />
-              </div>
-              <button
-                onClick={() => {
-                  p.closeProfileModal();
-                  setTimeout(() => p.setShowLogoutModal(true), 300);
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                Sair da conta
-              </button>
-            </div>
-          </div>
-        </>
+        <SlideUpModal onClose={() => p.setProfileModalState("closed")}>
+          <TableProfileContent p={p} />
+        </SlideUpModal>
       )}
 
       {/* ── Overlay de logout ────────────────────────────────────────────── */}

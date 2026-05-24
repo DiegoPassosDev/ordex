@@ -621,6 +621,7 @@ export function useTablePage() {
     showLogoutModal,
     setShowLogoutModal,
     profileModalState,
+    setProfileModalState,
     openProfileModal,
     closeProfileModal,
     scanning,
