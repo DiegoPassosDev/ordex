@@ -70,8 +70,8 @@ export class SessionsController {
 
   @Patch(':id/close')
   @Roles('MANAGER', 'CASHIER', 'WAITER')
-  close(@Param('id') id: string) {
-    return this.sessionsService.close(id);
+  close(@Param('id') id: string, @Req() req: any) {
+    return this.sessionsService.close(id, req.user?.role);
   }
 
   @Post(':id/call-waiter')

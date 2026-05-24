@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { sessionsService } from "@/services/sessions.service";
@@ -35,6 +35,12 @@ export function useWaiterPage() {
   const [profileModalState, setProfileModalState] = useState<"closed" | "open" | "closing">("closed");
   const [showOpenTableModal, setShowOpenTableModal] = useState(false);
   const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
+  const sessionIdsRef = useRef(new Set<string>());
+  const closingSessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    sessionIdsRef.current = new Set(sessions.map((s) => s.id));
+  }, [sessions]);
 
   function openProfileModal() {
     setProfileModalState("open");
@@ -72,15 +78,28 @@ export function useWaiterPage() {
     { type: "restaurant", id: restaurantId },
     {
       table_session_updated: (data: any) => {
-        if (data?.status === "CLOSED") {
+        if (data?.id && !data?.waiterId && !sessionIdsRef.current.has(data.id)) {
           const tableNumber = data?.table?.number || "?";
           addNotification(
-            "bill_requested",
-            "Mesa Encerrada",
-            `Mesa ${tableNumber} foi encerrada pelo gestor`,
+            "new_order",
+            "Nova Mesa",
+            `Mesa ${tableNumber} aberta — sem garçom`,
             tableNumber,
           );
-          toast(`Mesa ${tableNumber} encerrada pelo gestor`, { icon: "🔒" });
+          toast(`Mesa ${tableNumber} foi aberta por um cliente!`, { icon: "🆕" });
+        }
+        if (data?.status === "CLOSED" && data.id !== closingSessionIdRef.current) {
+          const tableNumber = data?.table?.number || "?";
+          const reason = data?.closeReason;
+          const role = data?.closedByRole;
+          const message =
+            reason === "AUTO_CLOSED"
+              ? `Mesa ${tableNumber} encerrada pelo cliente`
+              : role === "MANAGER"
+                ? `Mesa ${tableNumber} encerrada pelo gestor`
+                : `Mesa ${tableNumber} foi encerrada`;
+          addNotification("bill_requested", "Mesa Encerrada", message, tableNumber);
+          toast(message, { icon: "🔒" });
         }
         loadSessions();
       },
@@ -159,9 +178,9 @@ export function useWaiterPage() {
     try {
       await sessionsService.assignWaiter(sessionId, employee.id);
       toast.success("Mesa aceita!");
+      setSelectedSession(null);
+      setTab("tables");
       loadSessions();
-      const updated = await sessionsService.getOne(sessionId);
-      setSelectedSession(updated);
     } catch {
       toast.error("Erro ao aceitar mesa.");
     }
@@ -183,12 +202,15 @@ export function useWaiterPage() {
 
   async function handleCloseBill(sessionId: string) {
     try {
+      closingSessionIdRef.current = sessionId;
       await sessionsService.close(sessionId);
       toast.success("Conta fechada! Mesa liberada.");
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
       setSelectedSession(null);
     } catch {
       toast.error("Erro ao fechar conta.");
+    } finally {
+      closingSessionIdRef.current = null;
     }
   }
 
@@ -257,22 +279,30 @@ export function useWaiterPage() {
     );
   }
 
-  const pendingDeliveries = sessions.reduce(
+  const mySessions = sessions.filter((s) => s.waiterId === employee?.id);
+  const availableSessions = sessions.filter((s) => !s.waiterId);
+
+  const pendingDeliveries = mySessions.reduce(
     (acc, s) =>
       acc + (s.orders?.filter((o) => o.status === "READY").length || 0),
     0,
   );
 
-  const alerts = sessions.filter(
+  const mySessionAlerts = mySessions.filter(
     (s) =>
       s.status === "REQUESTING_BILL" ||
       s.orders?.some((o) => o.status === "READY"),
-  ).length;
+  );
+
+  const alerts = mySessionAlerts.length + availableSessions.length;
 
   return {
     employee,
     restaurantId,
     sessions,
+    mySessions,
+    availableSessions,
+    mySessionAlerts,
     selectedSession,
     tab,
     loading,
@@ -288,6 +318,7 @@ export function useWaiterPage() {
     pendingDeliveries,
     alerts,
     profileModalState,
+    setProfileModalState,
     openProfileModal,
     closeProfileModal,
     showOpenTableModal,

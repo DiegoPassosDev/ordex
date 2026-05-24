@@ -193,7 +193,7 @@ export class SessionsService {
     return { session: updated, bill };
   }
 
-  async close(id: string) {
+  async close(id: string, closedByRole?: string) {
     const session = await this.findOne(id);
 
     const updated = await this.prisma.tableSession.update({
@@ -202,7 +202,11 @@ export class SessionsService {
       include: { table: true },
     });
 
-    this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, {
+      ...updated,
+      closeReason: 'MANUAL_CLOSE',
+      closedByRole,
+    });
 
     this.gateway.notifySessionClosedByManager(id, {
       guestIds: session.guests.map((g) => g.id),
@@ -229,7 +233,10 @@ export class SessionsService {
         data: { status: 'CLOSED', closedAt: new Date() },
         include: { table: true },
       });
-      this.gateway.notifyTableSessionUpdate(session.restaurantId, closed);
+      this.gateway.notifyTableSessionUpdate(session.restaurantId, {
+        ...closed,
+        closeReason: 'AUTO_CLOSED',
+      });
       return;
     }
 
