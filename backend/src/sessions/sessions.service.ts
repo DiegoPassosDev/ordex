@@ -151,14 +151,15 @@ export class SessionsService {
     });
 
     const serviceChargeRate = restaurant?.serviceCharge ?? 10;
-    const serviceChargeAmount = dto.serviceChargeAccepted
-      ? subtotal * (serviceChargeRate / 100)
-      : 0;
+    let serviceChargeAmount = 0;
+    if (dto.serviceChargeType === 'PERCENTAGE') {
+      serviceChargeAmount = subtotal * (serviceChargeRate / 100);
+    } else if (dto.serviceChargeType === 'CUSTOM') {
+      serviceChargeAmount = dto.customServiceChargeAmount ?? 0;
+    }
 
     const total = subtotal + serviceChargeAmount;
 
-    // Cria o Bill com status PENDING e a preferência do cliente
-    // O caixa depois cria o Payment e fecha a sessão
     const bill = await this.prisma.bill.create({
       data: {
         sessionId: id,
@@ -167,29 +168,28 @@ export class SessionsService {
         total,
         status: 'PENDING',
         preferredPaymentMethod: dto.preferredPaymentMethod,
+        serviceChargeType: dto.serviceChargeType,
+        serviceChargeAccepted: dto.serviceChargeType !== 'NONE',
+        customServiceChargeAmount:
+          dto.serviceChargeType === 'CUSTOM' ? dto.customServiceChargeAmount : null,
+        splitCount: dto.splitCount || null,
       },
     });
 
-    // Muda o status da sessão para REQUESTING_BILL
-    // e guarda a preferência de pagamento nas notas do bill (via notes no Payment futuro)
-    // A preferência fica disponível para o caixa via bill.session
     const updated = await this.prisma.tableSession.update({
       where: { id },
-      data: {
-        status: 'REQUESTING_BILL',
-        // Guardamos a preferência como metadata no próprio update
-        // O caixa lê via sessionsService.findOne que retorna o bill
-      },
+      data: { status: 'REQUESTING_BILL' },
       include: { table: true },
     });
 
-    // Notifica garçom, caixa e gestor
     this.gateway.notifyBillRequest(session.restaurantId, id, {
       ...updated,
       bill: {
         ...bill,
         preferredPaymentMethod: dto.preferredPaymentMethod,
-        serviceChargeAccepted: dto.serviceChargeAccepted,
+        serviceChargeType: dto.serviceChargeType,
+        serviceChargeAccepted: dto.serviceChargeType !== 'NONE',
+        splitCount: dto.splitCount,
       },
     });
     this.gateway.notifyTableSessionUpdate(session.restaurantId, updated);

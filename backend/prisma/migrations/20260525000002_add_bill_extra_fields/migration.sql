@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Bill" ADD COLUMN "serviceChargeType" TEXT DEFAULT 'PERCENTAGE';
+ALTER TABLE "Bill" ADD COLUMN "customServiceChargeAmount" DOUBLE PRECISION;
+ALTER TABLE "Bill" ADD COLUMN "splitCount" INTEGER;

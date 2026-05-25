@@ -226,8 +226,11 @@ model Bill {
   serviceCharge  Float         @default(0)
   total          Float
   status         PaymentStatus @default(PENDING)
-  preferredPaymentMethod String? 
-  serviceChargeAccepted  Boolean?      
+  preferredPaymentMethod String?
+  serviceChargeAccepted  Boolean?
+  serviceChargeType     String?   @default("PERCENTAGE")
+  customServiceChargeAmount Float?
+  splitCount            Int?
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
 

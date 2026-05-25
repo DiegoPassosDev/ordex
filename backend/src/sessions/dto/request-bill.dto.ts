@@ -1,6 +1,5 @@
-import { IsEnum, IsBoolean } from 'class-validator';
+import { IsEnum, IsOptional, IsNumber, Min, IsString } from 'class-validator';
 
-// Usa os mesmos valores do enum PaymentMethod do schema
 export enum PreferredPaymentMethod {
   CASH = 'CASH',
   PIX = 'PIX',
@@ -12,6 +11,15 @@ export class RequestBillDto {
   @IsEnum(PreferredPaymentMethod)
   preferredPaymentMethod!: PreferredPaymentMethod;
 
-  @IsBoolean()
-  serviceChargeAccepted!: boolean;
+  @IsString()
+  serviceChargeType!: 'PERCENTAGE' | 'CUSTOM' | 'NONE';
+
+  @IsOptional()
+  @IsNumber()
+  customServiceChargeAmount?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  splitCount?: number;
 }
