@@ -220,10 +220,8 @@ export function useTablePage() {
             }
           } else {
             // Não está — pede autorização
-            // Se a sessão não tem guests, o garçom é o responsável
-            const ownerGuest = existingSession.guests?.[0];
             setOwnerName(
-              ownerGuest?.name?.split(" ")[0] ||
+              existingSession.ownerName?.split(" ")[0] ||
                 (existingSession as any).guestLabel ||
                 "o responsável",
             );
@@ -308,15 +306,25 @@ export function useTablePage() {
     }
   }, [hasHydrated, guest?.id, waitingForAccess, pendingSessionId]);
 
-  // ── Polling ao voltar ao foco — verifica solicitações pendentes e se sessão foi encerrada ──
+  // ── Polling ao voltar do standby — recarrega dados perdidos pelo WebSocket ──
   useEffect(() => {
-    async function checkSessionStatus() {
+    async function refreshData() {
       const sid = sessionId || pendingSessionId;
-      if (!sid || accessDenied) return;
+      if (!sid) return;
+
+      // Recarrega pedidos silenciosamente (sem modal de erro)
+      try {
+        const data = await ordersService.getBySession(sid);
+        setOrders(data);
+      } catch {
+        // silencioso — não mostra modal em fallback de standby
+      }
+
+      if (!sessionId || accessDenied) return;
 
       try {
-        // Verifica se a sessão ainda está aberta (fallback p/ quando WebSocket perdeu o evento)
-        const session = await sessionsService.getOne(sid);
+        // Verifica se a sessão ainda está aberta
+        const session = await sessionsService.getOne(sessionId);
         if (session.status === "CLOSED") {
           setSessionClosedByManager(true);
           return;
@@ -324,12 +332,9 @@ export function useTablePage() {
       } catch {
         // sessão pode ter sido deletada
       }
-    }
-
-    async function checkPendingRequests() {
-      if (!sessionId || accessDenied) return;
 
       try {
+        // Verifica solicitações de acesso pendentes
         const pending =
           await sessionsService.getPendingAccessRequests(sessionId);
         if (pending && pending.length > 0) {
@@ -352,24 +357,19 @@ export function useTablePage() {
 
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") {
-        checkSessionStatus();
-        checkPendingRequests();
+        refreshData();
       }
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Polling periódico como fallback (a cada 30s)
-    const interval = window.setInterval(() => {
-      checkSessionStatus();
-      checkPendingRequests();
-    }, 30_000);
+    const interval = window.setInterval(refreshData, 30_000);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [sessionId, guest?.id, waitingForAccess, accessDenied, incomingRequest?.requestId]);
+  }, [sessionId, guest?.id, waitingForAccess, accessDenied, incomingRequest?.requestId, pendingSessionId, loadOrders]);
 
   // ── WebSocket — atualizações em tempo real ────────────────────────────────
   useSocket(
@@ -397,6 +397,7 @@ export function useTablePage() {
         }
       },
       new_order: () => loadOrders(),
+      order_item_status_updated: () => loadOrders(),
       bill_requested: () => {
         setBillRequested(true);
       },

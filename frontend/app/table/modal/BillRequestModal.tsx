@@ -26,13 +26,29 @@ export function BillRequestModal({
   onClose,
 }: BillRequestModalProps) {
   // Calcula subtotal dos pedidos não cancelados
-  const subtotal = orders.reduce((acc, order) => {
-    if (order.status === "CANCELLED") return acc;
-    return (
-      acc +
-      order.items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
-    );
-  }, 0);
+  const groupedItems = (() => {
+    const map = new Map<string, { name: string; quantity: number; price: number; notes?: string }>();
+    for (const order of orders) {
+      if (order.status === "CANCELLED") continue;
+      for (const item of order.items) {
+        const key = `${item.menuItemId ?? item.menuItem?.id}-${item.price}-${item.notes ?? ""}`;
+        const existing = map.get(key);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          map.set(key, {
+            name: item.menuItem?.name ?? "",
+            quantity: item.quantity,
+            price: item.price,
+            notes: item.notes,
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
+  })();
+
+  const subtotal = groupedItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   const serviceAmount = acceptService ? subtotal * (serviceCharge / 100) : 0;
 
@@ -55,6 +71,35 @@ export function BillRequestModal({
           <button onClick={onClose}>
             <X className="w-5 h-5 text-gray-400" />
           </button>
+        </div>
+
+        {/* Itens do pedido */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Itens
+          </p>
+          <div className="space-y-4">
+            {groupedItems.map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">
+                  {item.quantity}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-200 truncate">
+                    {item.name}
+                  </p>
+                  {item.notes && (
+                    <p className="text-xs text-gray-500 italic">
+                      {item.notes}
+                    </p>
+                  )}
+                </div>
+                <span className="text-sm text-gray-300 shrink-0">
+                  R$ {(item.price * item.quantity).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Resumo dos valores */}

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { CustomToaster } from "@/components/ui/Toast";
 import { SlideUpModal, useSlideUpClose } from "@/components/ui/SlideUpModal";
+import { ORDER_STATUS_DOT, ORDER_STATUS_LABEL } from "@/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { BillRequestModal } from "./modal/BillRequestModal";
@@ -674,21 +675,19 @@ function TablePageInner() {
                 <div className="space-y-1.5">
                   {order.items.map((item, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
+                      <span className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">
                         {item.quantity}
                       </span>
-                      <span className="text-sm text-gray-300">
+                      <span className="text-sm text-gray-300 flex-1 truncate">
                         {item.menuItem.name}
+                      </span>
+                      <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/50 border border-gray-600/50 text-gray-400">
+                        <span className={`w-1.5 h-1.5 rounded-full ${ORDER_STATUS_DOT[item.status]}`} />
+                        {ORDER_STATUS_LABEL[item.status]}
                       </span>
                     </div>
                   ))}
                 </div>
-                {order.status === "DELIVERED" && (
-                  <div className="flex items-center gap-1.5 mt-3 text-green-400 text-xs">
-                    <CheckCheck className="w-3.5 h-3.5" />
-                    Entregue
-                  </div>
-                )}
               </div>
             ))}
             {/* Botão solicitar conta */}
