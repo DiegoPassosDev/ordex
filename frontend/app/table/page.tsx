@@ -309,7 +309,7 @@ function TablePageInner() {
         <div className="text-center">
           <h3 className="text-lg font-bold text-white">Mesa encerrada</h3>
           <p className="text-gray-400 text-sm leading-relaxed mt-2">
-            O gestor encerrou esta mesa. Voltando para o início em 5 segundos…
+            Esta mesa foi fechada. Voltando para o início em 5 segundos…
           </p>
         </div>
         <Loader2 className="w-5 h-5 text-orange-400 animate-spin" />
@@ -866,6 +866,12 @@ function TablePageInner() {
           setPaymentMethod={p.setPaymentMethod}
           acceptService={p.acceptService}
           setAcceptService={p.setAcceptService}
+          serviceChargeType={p.serviceChargeType}
+          setServiceChargeType={p.setServiceChargeType}
+          customServiceChargeAmount={p.customServiceChargeAmount}
+          setCustomServiceChargeAmount={p.setCustomServiceChargeAmount}
+          splitCount={p.splitCount}
+          setSplitCount={p.setSplitCount}
           requesting={p.requestingBill}
           onConfirm={p.handleRequestBill}
           onClose={() => p.setShowBillModal(false)}

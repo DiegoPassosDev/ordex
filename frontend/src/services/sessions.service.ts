@@ -58,7 +58,9 @@ export const sessionsService = {
     sessionId: string,
     body: {
       preferredPaymentMethod: string;
-      serviceChargeAccepted: boolean;
+      serviceChargeType: "PERCENTAGE" | "CUSTOM" | "NONE";
+      customServiceChargeAmount?: number;
+      splitCount?: number;
     },
   ) {
     const { data } = await api.patch(

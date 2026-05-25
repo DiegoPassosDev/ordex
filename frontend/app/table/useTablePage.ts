@@ -115,6 +115,9 @@ export function useTablePage() {
   const [showBillModal, setShowBillModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("PIX");
   const [acceptService, setAcceptService] = useState(true);
+  const [serviceChargeType, setServiceChargeType] = useState<"PERCENTAGE" | "CUSTOM" | "NONE">("PERCENTAGE");
+  const [customServiceChargeAmount, setCustomServiceChargeAmount] = useState("");
+  const [splitCount, setSplitCount] = useState(1);
   const [requestingBill, setRequestingBill] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
 
@@ -574,8 +577,11 @@ export function useTablePage() {
     try {
       await sessionsService.requestBill(sessionId, {
         preferredPaymentMethod: paymentMethod,
-        serviceChargeAccepted: acceptService,
-      });
+        serviceChargeType,
+        customServiceChargeAmount:
+          serviceChargeType === "CUSTOM" ? parseFloat(customServiceChargeAmount) || 0 : undefined,
+        splitCount: splitCount > 1 ? splitCount : undefined,
+      } as any);
       setBillRequested(true);
       setShowBillModal(false);
       toast.success("Conta solicitada! O garçom virá em breve.");
@@ -690,6 +696,12 @@ export function useTablePage() {
     setPaymentMethod,
     acceptService,
     setAcceptService,
+    serviceChargeType,
+    setServiceChargeType,
+    customServiceChargeAmount,
+    setCustomServiceChargeAmount,
+    splitCount,
+    setSplitCount,
     requestingBill,
     billRequested,
   };
