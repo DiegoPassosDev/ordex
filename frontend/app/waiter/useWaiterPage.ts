@@ -122,10 +122,13 @@ export function useWaiterPage() {
         }
         loadSessions();
       },
+      order_item_status_updated: () => {
+        loadSessions();
+      },
       waiter_called: (data: any) => {
         addNotification(
           "waiter_called",
-          "Garçom Chamado",
+          "Mesa Chamando",
           `Mesa ${data.tableNumber}: ${data.reason}`,
           data.tableNumber,
         );
@@ -171,6 +174,33 @@ export function useWaiterPage() {
     } finally {
       setLoading(false);
     }
+  }, [restaurantId]);
+
+  async function refreshSessionsSilent() {
+    try {
+      const data = await sessionsService.getActiveByRestaurant(restaurantId);
+      setSessions(data);
+    } catch {
+      // silent — não mostra erro nem loading para não atrapalhar UX
+    }
+  }
+
+  // ── Fallback ao voltar do standby / polling periódico ─────────────────
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshSessionsSilent();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const interval = window.setInterval(refreshSessionsSilent, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(interval);
+    };
   }, [restaurantId]);
 
   async function handleAcceptTable(sessionId: string) {

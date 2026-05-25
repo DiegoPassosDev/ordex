@@ -24,10 +24,29 @@ export function WaiterCloseBillModal({ session, onClose, onSuccess }: WaiterClos
   const [serviceChargeAccepted, setServiceChargeAccepted] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const subtotal = session.orders?.reduce((acc, o) => {
-    if (o.status === "CANCELLED") return acc;
-    return acc + o.items.reduce((s, i) => s + i.price * i.quantity, 0);
-  }, 0) || 0;
+  const groupedItems = (() => {
+    const map = new Map<string, { name: string; quantity: number; price: number; notes?: string }>();
+    for (const order of session.orders ?? []) {
+      if (order.status === "CANCELLED") continue;
+      for (const item of order.items) {
+        const key = `${item.menuItemId ?? item.menuItem?.id}-${item.price}-${item.notes ?? ""}`;
+        const existing = map.get(key);
+        if (existing) {
+          existing.quantity += item.quantity;
+        } else {
+          map.set(key, {
+            name: item.menuItem?.name ?? "",
+            quantity: item.quantity,
+            price: item.price,
+            notes: item.notes,
+          });
+        }
+      }
+    }
+    return Array.from(map.values());
+  })();
+
+  const subtotal = groupedItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   const serviceCharge = serviceChargeAccepted ? subtotal * 0.1 : 0;
   const total = subtotal + serviceCharge;
@@ -60,6 +79,35 @@ export function WaiterCloseBillModal({ session, onClose, onSuccess }: WaiterClos
           <button onClick={onClose} className="w-8 h-8 rounded-lg bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-all">
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Itens do pedido */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Itens
+          </p>
+          <div className="space-y-3">
+            {groupedItems.map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">
+                  {item.quantity}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-200 truncate">
+                    {item.name}
+                  </p>
+                  {item.notes && (
+                    <p className="text-xs text-gray-500 italic">
+                      {item.notes}
+                    </p>
+                  )}
+                </div>
+                <span className="text-sm text-gray-300 shrink-0">
+                  R$ {(item.price * item.quantity).toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">

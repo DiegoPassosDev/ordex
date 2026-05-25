@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Bell, CheckCheck, Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { TableSession } from "@/types";
+import { TableSession, ORDER_STATUS_DOT, ORDER_STATUS_LABEL } from "@/types";
 import { WaiterAddOrderModal } from "./modal/WaiterAddOrderModal";
 import { WaiterCloseBillModal } from "./modal/WaiterCloseBillModal";
 
@@ -151,7 +151,7 @@ export function WaiterSessionDetail({
               PEDIDOS
             </p>
             <p className="text-xs font-medium text-gray-400">
-              {session.orders?.length || 0} itens
+              {session.orders?.reduce((acc, o) => acc + o.items.reduce((s, i) => s + i.quantity, 0), 0) || 0} itens
             </p>
           </div>
 
@@ -191,14 +191,18 @@ export function WaiterSessionDetail({
                       <span className="w-6 h-6 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
                         {item.quantity}
                       </span>
-                      <span className="text-sm text-gray-200">
+                      <span className="text-sm text-gray-200 flex-1 truncate">
                         {item.menuItem?.name}
                       </span>
                       {item.notes && (
-                        <span className="text-xs text-gray-400 italic">
-                          — {item.notes}
+                        <span className="text-xs text-gray-500 italic truncate max-w-[120px] shrink-0">
+                          {item.notes}
                         </span>
                       )}
+                      <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/50 border border-gray-600/50 text-gray-400">
+                        <span className={`w-1.5 h-1.5 rounded-full ${ORDER_STATUS_DOT[item.status]}`} />
+                        {ORDER_STATUS_LABEL[item.status]}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -232,7 +236,7 @@ export function WaiterSessionDetail({
         </div>
       )}
 
-      {showAddOrder && guestId && (
+      {showAddOrder && (
         <WaiterAddOrderModal
           sessionId={session.id}
           guestId={guestId}
