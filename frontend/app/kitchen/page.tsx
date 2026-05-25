@@ -11,7 +11,7 @@ function getElapsedMinutes(date: string) {
   return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
 }
 
-function ElapsedTimer({ date }: { date: string }) {
+function ElapsedTimer({ date, maxPrepTime }: { date: string; maxPrepTime: number }) {
   const [minutes, setMinutes] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -26,8 +26,9 @@ function ElapsedTimer({ date }: { date: string }) {
 
   if (!mounted) return null;
 
-  const isLate = minutes >= 15;
-  const isWarning = minutes >= 10;
+  const ratio = maxPrepTime > 0 ? minutes / maxPrepTime : 0;
+  const isLate = ratio >= 1;
+  const isWarning = ratio >= 0.8;
 
   return (
     <span
@@ -35,12 +36,12 @@ function ElapsedTimer({ date }: { date: string }) {
         isLate
           ? "bg-red-500/20 text-red-400 border border-red-500/30"
           : isWarning
-            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+            ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
             : "bg-gray-700 text-gray-400 border border-gray-600"
       }`}
     >
       <Clock className="w-3 h-3" />
-      {minutes} min
+      {minutes}/{maxPrepTime} min
     </span>
   );
 }
@@ -155,18 +156,27 @@ export default function KitchenPage() {
               )}
 
               {col.orders.map((order) => {
-                const isLate = p.mounted
-                  ? getElapsedMinutes(order.createdAt) >= 15
-                  : false;
+                const maxPrepTime = Math.max(
+                  ...order.items.map(
+                    (i: any) => i.menuItem?.prepTimeMin ?? 10,
+                  ),
+                  1,
+                );
+                const elapsed = getElapsedMinutes(order.createdAt);
+                const ratio = elapsed / maxPrepTime;
+                const isOverdue = ratio >= 1;
 
                 return (
                   <div
                     key={order.id}
                     className={`bg-gray-800 rounded-2xl p-4 border transition-all ${
-                      isLate ? "border-red-500/50" : "border-gray-700"
+                      isOverdue
+                        ? "border-red-500/50 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
+                        : ratio >= 0.8
+                          ? "border-orange-500/40"
+                          : "border-gray-700"
                     }`}
                   >
-                    {/* Cabeçalho do card */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
@@ -178,7 +188,7 @@ export default function KitchenPage() {
                           Mesa {order.session?.table?.number ?? "?"}
                         </span>
                       </div>
-                      <ElapsedTimer date={order.createdAt} />
+                      <ElapsedTimer date={order.createdAt} maxPrepTime={maxPrepTime} />
                     </div>
 
                     {/* Itens com ação individual */}
