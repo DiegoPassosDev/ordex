@@ -61,7 +61,7 @@ export function useTheme() {
   return context;
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
@@ -74,7 +74,7 @@ export function ThemeToggle() {
     return (
       <button
         type="button"
-        className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-700 bg-gray-800"
+        className={className || "flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-700 bg-gray-800"}
       >
         <Sun className="h-5 w-5 opacity-0" />
       </button>
@@ -88,7 +88,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-700 bg-gray-800 text-gray-200 shadow-lg transition-all hover:bg-gray-700 hover:text-white focus:outline-none"
+      className={className || "flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-700 bg-gray-800 text-gray-200 shadow-lg transition-all hover:bg-gray-700 hover:text-white focus:outline-none"}
       aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
       title={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
     >

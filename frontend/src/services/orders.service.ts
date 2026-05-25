@@ -2,7 +2,9 @@ import { api } from '@/lib/api';
 
 export const ordersService = {
   async create(sessionId: string, guestId: string, items: any[]) {
-    const { data } = await api.post('/orders', { sessionId, guestId, items });
+    const body: any = { sessionId, items };
+    if (guestId) body.guestId = guestId;
+    const { data } = await api.post('/orders', body);
     return data;
   },
 
@@ -23,6 +25,11 @@ export const ordersService = {
 
   async cancel(orderId: string) {
     const { data } = await api.delete(`/orders/${orderId}/cancel`);
+    return data;
+  },
+
+  async updateItemStatus(orderId: string, itemId: string, status: string) {
+    const { data } = await api.patch(`/orders/${orderId}/items/${itemId}/status`, { status });
     return data;
   },
 };

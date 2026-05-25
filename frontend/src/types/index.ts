@@ -54,6 +54,7 @@ export interface MenuItem {
   prepTimeMin: number;
   available: boolean;
   categoryId: string;
+  category?: Category;
 }
 
 export interface Category {
@@ -70,6 +71,7 @@ export interface OrderItem {
   quantity: number;
   notes?: string;
   price: number;
+  status: OrderStatus;
   menuItem: MenuItem;
 }
 
