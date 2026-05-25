@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { UpdateItemStatusDto } from './dto/update-item-status.dto';
 import { OrderStatus } from '@prisma/client';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import { StockService } from 'src/stock/stock.service';
@@ -27,8 +28,29 @@ export class OrdersService {
     if (session.status === 'CLOSED')
       throw new BadRequestException('Esta mesa já foi encerrada.');
 
-    const isMember = session.guests?.some((g) => g.id === dto.guestId);
-    if (!isMember)
+    let guestId = dto.guestId;
+    if (!guestId) {
+      const existing = session.guests?.[0];
+      if (existing) {
+        guestId = existing.id;
+      } else {
+        const guest = await this.prisma.guest.create({
+          data: {
+            name: session.guestLabel || `Mesa ${session.id.slice(-4)}`,
+            email: `mesa-${Date.now()}@local`,
+            passwordHash: '',
+          },
+        });
+        await this.prisma.tableSession.update({
+          where: { id: session.id },
+          data: { guests: { connect: { id: guest.id } } },
+        });
+        guestId = guest.id;
+      }
+    }
+
+    const isMember = session.guests?.some((g) => g.id === guestId);
+    if (!isMember && dto.guestId)
       throw new BadRequestException('Você não faz parte desta mesa.');
 
     const uniqueItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
@@ -48,7 +70,7 @@ export class OrdersService {
     const order = await this.prisma.order.create({
       data: {
         sessionId: dto.sessionId,
-        guestId: dto.guestId,
+        guestId,
         items: {
           create: dto.items.map((item) => {
             const menuItem = menuItems.find((m) => m.id === item.menuItemId);
@@ -70,7 +92,7 @@ export class OrdersService {
         },
       },
       include: {
-        items: { include: { menuItem: true } },
+        items: { include: { menuItem: { include: { category: true } } } },
         statusHistory: true,
         session: { include: { table: true } },
       },
@@ -86,7 +108,7 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where: { sessionId },
       include: {
-        items: { include: { menuItem: true } },
+        items: { include: { menuItem: { include: { category: true } } } },
         statusHistory: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'asc' },
@@ -107,7 +129,7 @@ export class OrdersService {
     return this.prisma.order.findMany({
       where,
       include: {
-        items: { include: { menuItem: true } },
+        items: { include: { menuItem: { include: { category: true } } } },
         session: { include: { table: true, waiter: true } },
         statusHistory: { orderBy: { createdAt: 'asc' } },
       },
@@ -119,7 +141,7 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
-        items: { include: { menuItem: true } },
+        items: { include: { menuItem: { include: { category: true } } } },
         statusHistory: { orderBy: { createdAt: 'asc' } },
         session: { include: { table: true } },
       },
@@ -140,7 +162,7 @@ export class OrdersService {
         },
       },
       include: {
-        items: { include: { menuItem: true } },
+        items: { include: { menuItem: { include: { category: true } } } },
         statusHistory: { orderBy: { createdAt: 'asc' } },
         session: { include: { table: true } },
       },
@@ -162,5 +184,80 @@ export class OrdersService {
 
   async cancel(id: string) {
     return this.updateStatus(id, { status: OrderStatus.CANCELLED });
+  }
+
+  async updateItemStatus(
+    orderId: string,
+    itemId: string,
+    dto: UpdateItemStatusDto,
+  ) {
+    const order = await this.findOne(orderId);
+
+    const orderItem = order.items.find((i) => i.id === itemId);
+    if (!orderItem) throw new NotFoundException('Item do pedido não encontrado.');
+
+    await this.prisma.orderItem.update({
+      where: { id: itemId },
+      data: { status: dto.status },
+    });
+
+    // Recarrega o pedido com os itens atualizados
+    const updatedOrder = await this.findOne(orderId);
+
+    // Recalcula o status agregado do pedido com base nos itens
+    const itemStatuses = updatedOrder.items.map((i) => i.status);
+    const aggregateStatus = this.computeAggregateStatus(itemStatuses);
+
+    // Atualiza o status do pedido se mudou
+    if (aggregateStatus !== order.status) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status: aggregateStatus },
+      });
+
+      await this.prisma.orderStatusHistory.create({
+        data: {
+          orderId,
+          status: aggregateStatus,
+        },
+      });
+    }
+
+    const finalOrder = await this.findOne(orderId);
+
+    // Notifica mudança no item individual
+    this.gateway.notifyOrderItemStatusUpdate(
+      order.session!.restaurantId,
+      order.sessionId,
+      {
+        orderId,
+        itemId,
+        status: dto.status,
+        order: finalOrder,
+      },
+    );
+
+    // Notifica mudança no pedido como um todo (se o status agregado mudou)
+    if (aggregateStatus !== order.status) {
+      this.gateway.notifyOrderStatusUpdate(
+        order.session!.restaurantId,
+        order.sessionId,
+        finalOrder,
+      );
+    }
+
+    return finalOrder;
+  }
+
+  private computeAggregateStatus(statuses: OrderStatus[]): OrderStatus {
+    if (statuses.every((s) => s === OrderStatus.DELIVERED || s === OrderStatus.CANCELLED))
+      return OrderStatus.DELIVERED;
+    if (statuses.some((s) => s === OrderStatus.ON_THE_WAY))
+      return OrderStatus.ON_THE_WAY;
+    if (statuses.some((s) => s === OrderStatus.READY))
+      return OrderStatus.READY;
+    if (statuses.some((s) => s === OrderStatus.PREPARING))
+      return OrderStatus.PREPARING;
+    return OrderStatus.WAITING;
   }
 }

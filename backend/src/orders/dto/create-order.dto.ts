@@ -26,8 +26,9 @@ export class CreateOrderDto {
   @IsUUID()
   sessionId!: string;
 
+  @IsOptional()
   @IsUUID()
-  guestId!: string;
+  guestId?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

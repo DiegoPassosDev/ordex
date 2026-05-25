@@ -139,6 +139,18 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('order_status_updated', order);
   }
 
+  // Notifica atualização de status de um item individual
+  notifyOrderItemStatusUpdate(
+    restaurantId: string,
+    sessionId: string,
+    payload: { orderId: string; itemId: string; status: string; order: any },
+  ) {
+    this.server
+      .to(`restaurant_${restaurantId}`)
+      .to(`session_${sessionId}`)
+      .emit('order_item_status_updated', payload);
+  }
+
   // Notifica chamada de garçom
   notifyWaiterCall(restaurantId: string, data: any) {
     this.server.to(`restaurant_${restaurantId}`).emit('waiter_called', data);

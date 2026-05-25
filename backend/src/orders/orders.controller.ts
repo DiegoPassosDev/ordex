@@ -12,6 +12,7 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { UpdateItemStatusDto } from './dto/update-item-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -52,6 +53,16 @@ export class OrdersController {
   @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR')
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(id, dto);
+  }
+
+  @Patch(':orderId/items/:itemId/status')
+  @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR')
+  updateItemStatus(
+    @Param('orderId') orderId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateItemStatusDto,
+  ) {
+    return this.ordersService.updateItemStatus(orderId, itemId, dto);
   }
 
   @Delete(':id/cancel')
