@@ -28,6 +28,10 @@ export class SessionsService {
       const updateData: any = {};
       if (dto.guestId) {
         updateData.guests = { connect: { id: dto.guestId } };
+        // Se a sessão não tem dono, o primeiro guest a conectar assume
+        if (!existing.ownerId) {
+          updateData.ownerId = dto.guestId;
+        }
       }
       if (dto.waiterId) {
         updateData.waiterId = dto.waiterId;
@@ -44,9 +48,8 @@ export class SessionsService {
     }
 
     let guestId = dto.guestId;
-    // Só cria guest temporário quando NÃO há garçom envolvido
-    // (ex: cliente abrindo mesa direto pelo QR Code)
-    if (dto.guestName && !guestId && !dto.waiterId) {
+    // Cria guest temporário quando um nome é informado sem guestId
+    if (dto.guestName && !guestId) {
       const email = `mesa-${Date.now()}@local`;
       const guest = await this.prisma.guest.create({
         data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
@@ -61,6 +64,7 @@ export class SessionsService {
         ...(dto.guestName && dto.waiterId && !guestId && { guestLabel: dto.guestName }),
         ...(guestId && {
           guests: { connect: { id: guestId } },
+          ownerId: guestId, // primeiro guest é o dono
         }),
         ...(dto.waiterId && { waiterId: dto.waiterId }),
       },
@@ -223,10 +227,10 @@ export class SessionsService {
     const updated = await this.prisma.tableSession.update({
       where: { id: sessionId },
       data: { guests: { disconnect: { id: guestId } } },
-      include: { table: true, guests: true }, // ← inclui guests para contar
+      include: { table: true, guests: true },
     });
 
-    // ✅ Se não sobrou nenhum guest, fecha a sessão automaticamente
+    // Se não sobrou nenhum guest, fecha a sessão automaticamente
     if (updated.guests.length === 0) {
       const closed = await this.prisma.tableSession.update({
         where: { id: sessionId },
@@ -236,6 +240,30 @@ export class SessionsService {
       this.gateway.notifyTableSessionUpdate(session.restaurantId, {
         ...closed,
         closeReason: 'AUTO_CLOSED',
+      });
+      return;
+    }
+
+    // Se o dono saiu e ainda há guests, transfere ownership
+    if (session.ownerId === guestId) {
+      const newOwnerId = updated.guests[0].id;
+
+      await this.prisma.tableSession.update({
+        where: { id: sessionId },
+        data: { ownerId: newOwnerId },
+      });
+
+      // Reatribui pedidos de acesso pendentes para o novo dono
+      await this.prisma.tableAccessRequest.updateMany({
+        where: { sessionId, status: 'PENDING', ownerId: guestId },
+        data: { ownerId: newOwnerId },
+      });
+
+      // Atualiza a sessão com o novo dono para notificar
+      const withNewOwner = await this.findOne(sessionId);
+      this.gateway.notifyTableSessionUpdate(session.restaurantId, {
+        ...withNewOwner,
+        ownershipTransferred: true,
       });
       return;
     }
@@ -282,10 +310,10 @@ export class SessionsService {
     const alreadyIn = session.guests?.some((g: any) => g.id === dto.guestId);
     if (alreadyIn) throw new BadRequestException('Você já está nesta mesa.');
 
-    // Determina o owner: se não há guests, o garçom é o responsável
+    // Determina o owner: usa ownerId explícito, ou fallback para o garçom
     let ownerId: string;
-    if (session.guests && session.guests.length > 0) {
-      ownerId = session.guests[0].id;
+    if (session.ownerId) {
+      ownerId = session.ownerId;
     } else if (session.waiterId) {
       ownerId = session.waiterId;
     } else {
@@ -351,8 +379,10 @@ export class SessionsService {
     if (request.status !== 'PENDING')
       throw new BadRequestException('Solicitação já respondida.');
 
-    // Verifica se quem está respondendo é o dono
-    if (request.ownerId !== userId)
+    // Verifica se quem está respondendo é o dono da sessão
+    const isCurrentOwner = request.session.ownerId === userId;
+    const isOriginalOwner = request.ownerId === userId;
+    if (!isCurrentOwner && !isOriginalOwner)
       throw new BadRequestException('Apenas o dono da mesa pode autorizar.');
 
     // Atualiza o status da solicitação
@@ -396,14 +426,35 @@ export class SessionsService {
 
     const isMember = guestId && session.guests?.some((g) => g.id === guestId);
 
-    if (isMember) return session;
+    if (isMember) {
+      return {
+        ...session,
+        ownerName: undefined,
+      };
+    }
+
+    // Resolve o nome do dono da mesa
+    let ownerName: string | null = null;
+    if (session.ownerId) {
+      const owner = session.guests?.find((g) => g.id === session.ownerId);
+      if (owner) {
+        ownerName = owner.name;
+      } else if (session.waiterId === session.ownerId) {
+        ownerName = 'Garçom';
+      }
+    }
+    if (!ownerName && session.guests?.length) {
+      ownerName = session.guests[0].name;
+    }
+    if (!ownerName) {
+      ownerName = session.guestLabel || 'Responsável';
+    }
 
     return {
       id: session.id,
       guestLabel: session.guestLabel || null,
-      guests: session.guests?.length
-        ? [{ name: session.guests[0].name || 'Responsável' }]
-        : [],
+      guests: [{ name: ownerName }],
+      ownerName,
     };
   }
 
