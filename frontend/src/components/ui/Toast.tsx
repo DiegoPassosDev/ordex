@@ -1,6 +1,6 @@
 'use client';
 
-import toast, { Toaster, ToastBar } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
 
@@ -119,15 +119,13 @@ export function CustomToaster() {
   return (
     <Toaster
       position="top-center"
+      gutter={12}
       toastOptions={{
         duration: 3500,
-        style: { padding: 0, background: 'transparent', boxShadow: 'none' },
       }}
     >
       {(t) => (
-        <ToastBar toast={t} style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}>
-          {() => <ToastContent t={t} />}
-        </ToastBar>
+        <ToastContent t={t} />
       )}
     </Toaster>
   );
