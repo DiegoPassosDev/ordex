@@ -203,6 +203,7 @@ export class PaymentsService {
       include: {
         table: true,
         waiter: true,
+        guests: true,
         orders: {
           where: { status: { not: 'CANCELLED' } },
           include: { items: { include: { menuItem: true } } },
