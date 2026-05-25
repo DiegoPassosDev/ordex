@@ -50,6 +50,12 @@ export default function KitchenPage() {
 
   if (!p.mounted) return null;
 
+  const itemActions: Record<string, { label: string; next: string } | null> = {
+    WAITING: { label: "Iniciar Preparo", next: "PREPARING" },
+    PREPARING: { label: "Marcar Pronto", next: "READY" },
+    READY: null,
+  };
+
   const columns = [
     {
       title: "Aguardando",
@@ -59,7 +65,6 @@ export default function KitchenPage() {
       bg: "bg-yellow-500/10",
       border: "border-yellow-500/30",
       dot: "bg-yellow-400",
-      action: { label: "Iniciar Preparo", next: "PREPARING" },
     },
     {
       title: "Em Preparo",
@@ -69,7 +74,6 @@ export default function KitchenPage() {
       bg: "bg-blue-500/10",
       border: "border-blue-500/30",
       dot: "bg-blue-400",
-      action: { label: "Marcar Pronto", next: "READY" },
     },
     {
       title: "Pronto",
@@ -79,7 +83,6 @@ export default function KitchenPage() {
       bg: "bg-green-500/10",
       border: "border-green-500/30",
       dot: "bg-green-400",
-      action: null,
     },
   ];
 
@@ -178,52 +181,49 @@ export default function KitchenPage() {
                       <ElapsedTimer date={order.createdAt} />
                     </div>
 
-                    {/* Itens */}
+                    {/* Itens com ação individual */}
                     <div className="space-y-2 mb-4">
-                      {order.items.map((item, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold shrink-0 mt-0.5">
-                            {item.quantity}
-                          </span>
-                          <div>
-                            <p className="text-gray-100 text-sm font-medium">
-                              {item.menuItem?.name}
-                            </p>
-                            {item.notes && (
-                              <p className="text-gray-400 text-xs mt-0.5">
-                                ⚠️ {item.notes}
+                      {order.items.map((item, i) => {
+                        const action = itemActions[item.status];
+                        return (
+                          <div key={i} className="flex items-start gap-2">
+                            <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold shrink-0 mt-0.5">
+                              {item.quantity}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-100 text-sm font-medium">
+                                {item.menuItem?.name}
                               </p>
+                              {item.notes && (
+                                <p className="text-gray-400 text-xs mt-0.5">
+                                  ⚠️ {item.notes}
+                                </p>
+                              )}
+                            </div>
+                            {action && (
+                              <button
+                                onClick={() =>
+                                  p.updateItemStatus(order.id, item.id, action.next)
+                                }
+                                className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+                                  action.next === "PREPARING"
+                                    ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                    : "bg-green-500 hover:bg-green-600 text-white"
+                                }`}
+                              >
+                                {action.label}
+                              </button>
+                            )}
+                            {item.status === "READY" && (
+                              <span className="shrink-0 text-xs text-green-400 font-medium flex items-center gap-1">
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                Pronto
+                              </span>
                             )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
-
-                    {/* Botão de ação */}
-                    {col.action && (
-                      <Button
-                        variant={
-                          col.action.next === "PREPARING"
-                            ? "primary"
-                            : "secondary"
-                        }
-                        size="sm"
-                        icon={col.action.next === "READY" ? CheckCheck : Flame}
-                        className="w-full"
-                        onClick={() => p.updateStatus(order.id, col.action!.next)}
-                      >
-                        {col.action.label}
-                      </Button>
-                    )}
-
-                    {col.status === "READY" && (
-                      <div className="flex items-center justify-center gap-2 py-1.5 rounded-xl bg-green-500/10 border border-green-500/20">
-                        <CheckCheck className="w-4 h-4 text-green-400" />
-                        <span className="text-green-400 text-xs font-medium">
-                          Aguardando garçom
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}

@@ -6,10 +6,26 @@ import { useSocket } from "@/hooks/useSocket";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthStore } from "@/store/auth.store";
-import { Order } from "@/types";
+import { Order, EmployeeRole, CategoryType } from "@/types";
 import { toast } from "@/components/ui/Toast";
 
 const RESTAURANT_ID = "f4385ae5-6187-40f8-97b4-d289d47dc441";
+
+const ROLE_CATEGORIES: Record<"KITCHEN" | "BAR", CategoryType[]> = {
+  KITCHEN: ["FOOD", "DESSERT"],
+  BAR: ["DRINK"],
+};
+
+function filterOrderByRole(order: Order, role: EmployeeRole | undefined): Order | null {
+  if (!role || role === "MANAGER" || role === "WAITER" || role === "CASHIER") return order;
+  const allowed = ROLE_CATEGORIES[role as "KITCHEN" | "BAR"];
+  if (!allowed) return order;
+  const filtered = order.items.filter(
+    (item) => item.menuItem?.category?.type && allowed.includes(item.menuItem.category.type),
+  );
+  if (filtered.length === 0) return null;
+  return { ...order, items: filtered };
+}
 
 export function useKitchenPage() {
   useRequireAuth(["KITCHEN", "BAR"]);
@@ -21,8 +37,13 @@ export function useKitchenPage() {
 
   useEffect(() => {
     setMounted(true);
-    loadOrders();
   }, []);
+
+  useEffect(() => {
+    if (employee?.role) {
+      loadOrders();
+    }
+  }, [employee?.role]);
 
   const restId = employee?.restaurantId || RESTAURANT_ID;
 
@@ -30,10 +51,12 @@ export function useKitchenPage() {
     { type: "restaurant", id: restId },
     {
       new_order: (order: Order) => {
+        const filtered = filterOrderByRole(order, employee?.role);
+        if (!filtered) return;
         setOrders((prev) => {
-          const exists = prev.find((o) => o.id === order.id);
+          const exists = prev.find((o) => o.id === filtered.id);
           if (exists) return prev;
-          return [order, ...prev];
+          return [filtered, ...prev];
         });
         addNotification(
           "new_order",
@@ -44,7 +67,25 @@ export function useKitchenPage() {
         toast.success(`Novo pedido — Mesa ${order.session?.table?.number}!`);
       },
       order_status_updated: (order: Order) => {
-        setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
+        const filtered = filterOrderByRole(order, employee?.role);
+        if (!filtered) {
+          setOrders((prev) => prev.filter((o) => o.id !== order.id));
+          return;
+        }
+        setOrders((prev) => prev.map((o) => (o.id === filtered.id ? filtered : o)));
+      },
+      order_item_status_updated: (payload: { orderId: string; itemId: string; status: string; order: Order }) => {
+        setOrders((prev) =>
+          prev.map((o) => {
+            if (o.id !== payload.orderId) return o;
+            const updatedItems = o.items.map((item) =>
+              item.id === payload.itemId ? { ...item, status: payload.status as any } : item,
+            );
+            const filtered = filterOrderByRole({ ...o, items: updatedItems }, employee?.role);
+            if (!filtered) return null;
+            return filtered;
+          }).filter(Boolean) as Order[],
+        );
       },
     },
   );
@@ -53,10 +94,13 @@ export function useKitchenPage() {
     try {
       setLoading(true);
       const data = await ordersService.getByRestaurant(restId);
-      const active = data.filter(
-        (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
-      );
-      setOrders(active);
+      const active = data
+        .filter(
+          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
+        )
+        .map((o: Order) => filterOrderByRole(o, employee?.role))
+        .filter(Boolean);
+      setOrders(active as Order[]);
     } catch {
       toast.error("Erro ao carregar pedidos.");
     } finally {
@@ -64,20 +108,65 @@ export function useKitchenPage() {
     }
   }
 
-  async function updateStatus(id: string, status: string) {
+  async function refreshOrdersSilent() {
     try {
-      await ordersService.updateStatus(id, status);
+      const data = await ordersService.getByRestaurant(restId);
+      const active = data
+        .filter(
+          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
+        )
+        .map((o: Order) => filterOrderByRole(o, employee?.role))
+        .filter(Boolean);
+      setOrders(active as Order[]);
+    } catch {
+      // silent
+    }
+  }
+
+  // ── Fallback ao voltar do standby / polling periódico ─────────────────
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        refreshOrdersSilent();
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const interval = window.setInterval(refreshOrdersSilent, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(interval);
+    };
+  }, [restId, employee?.role]);
+
+  async function updateItemStatus(orderId: string, itemId: string, status: string) {
+    try {
+      await ordersService.updateItemStatus(orderId, itemId, status);
       setOrders((prev) =>
-        prev.map((o) => (o.id === id ? { ...o, status: status as any } : o)),
+        prev.map((o) => {
+          if (o.id !== orderId) return o;
+          const updatedItems = o.items.map((item) =>
+            item.id === itemId ? { ...item, status: status as any } : item,
+          );
+          return { ...o, items: updatedItems };
+        }),
       );
     } catch {
       toast.error("Erro ao atualizar status.");
     }
   }
 
-  const waiting = orders.filter((o) => o.status === "WAITING");
-  const preparing = orders.filter((o) => o.status === "PREPARING");
-  const ready = orders.filter((o) => o.status === "READY");
+  function filterItemsByStatus(order: Order, status: string): Order | null {
+    const filtered = order.items.filter((i) => i.status === status);
+    if (filtered.length === 0) return null;
+    return { ...order, items: filtered };
+  }
+
+  const waiting = orders.map((o) => filterItemsByStatus(o, "WAITING")).filter(Boolean) as Order[];
+  const preparing = orders.map((o) => filterItemsByStatus(o, "PREPARING")).filter(Boolean) as Order[];
+  const ready = orders.map((o) => filterItemsByStatus(o, "READY")).filter(Boolean) as Order[];
 
   return {
     employee,
@@ -87,7 +176,7 @@ export function useKitchenPage() {
     waiting,
     preparing,
     ready,
-    updateStatus,
+    updateItemStatus,
     loadOrders,
   };
 }
