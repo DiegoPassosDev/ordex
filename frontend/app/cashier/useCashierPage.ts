@@ -179,6 +179,17 @@ export function useCashierPage() {
     );
   }
 
+  function getSessionItemCount(session: any): number {
+    return (
+      session.orders?.reduce((acc: number, o: any) => {
+        if (o.status === "CANCELLED") return acc;
+        return acc + o.items.reduce((s: number, i: any) => s + i.quantity, 0);
+      }, 0) || 0
+    );
+  }
+
+  const overallTotal = sessions.reduce((acc, s) => acc + getSessionTotal(s), 0);
+
   return {
     employee,
     loading,
@@ -201,6 +212,8 @@ export function useCashierPage() {
     billSessions,
     openSessions,
     getSessionTotal,
+    getSessionItemCount,
+    overallTotal,
     handleSelectSession,
     handleCloseSession,
     handlePayment,
