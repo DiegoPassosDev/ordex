@@ -48,6 +48,7 @@ model TableSession {
   restaurantId String
   waiterId     String?
   guestLabel   String?
+  ownerId      String?                    // dono explícito da mesa (Guest ID ou Employee ID)
   status       TableSessionStatus @default(OPEN)
   openedAt     DateTime           @default(now())
   closedAt     DateTime?
@@ -195,15 +196,16 @@ enum OrderStatus {
 }
 
 model OrderItem {
-  id         String  @id @default(uuid())
+  id         String      @id @default(uuid())
   orderId    String
   menuItemId String
-  quantity   Int     @default(1)
+  quantity   Int         @default(1)
   notes      String?
   price      Float
+  status     OrderStatus @default(WAITING)
 
-  order      Order    @relation(fields: [orderId], references: [id])
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  order      Order       @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem    @relation(fields: [menuItemId], references: [id])
 }
 
 model OrderStatusHistory {
