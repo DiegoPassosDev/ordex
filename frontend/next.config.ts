@@ -4,13 +4,13 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: "bottom-right",
   },
-  allowedDevOrigins: ["192.168.18.70", "192.168.56.1"],
+  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS || "localhost").split(","),
 
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://192.168.18.70:3001/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/:path*`,
       },
     ];
   },

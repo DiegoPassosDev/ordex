@@ -167,7 +167,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs text-gray-500 mt-8">
-            Suporte: contato@ordex.com.br
+            Suporte: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "contato@ordex.com.br"}
           </p>
         </div>
       </div>
