@@ -232,9 +232,11 @@ function Inner({
                 <p className="text-sm font-medium text-white">
                   Mesa {tables.find((t) => t.id === scannedTableId)?.number || "identificada"}
                 </p>
-                <p className="text-xs text-gray-400">
-                  ID: {scannedTableId?.slice(0, 8)}...
-                </p>
+                {scannedTableId && tables.some((t) => t.id === scannedTableId) ? (
+                  <p className="text-xs text-gray-400">Disponível</p>
+                ) : (
+                  <p className="text-xs text-gray-400">QR Code lido</p>
+                )}
               </div>
             </div>
 

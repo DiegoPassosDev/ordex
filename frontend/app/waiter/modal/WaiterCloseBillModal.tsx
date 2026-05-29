@@ -17,11 +17,12 @@ type ServiceChargeOption = "PERCENTAGE" | "CUSTOM" | "NONE";
 
 interface WaiterCloseBillModalProps {
   session: TableSession;
+  employeeId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function WaiterCloseBillModal({ session, onClose, onSuccess }: WaiterCloseBillModalProps) {
+export function WaiterCloseBillModal({ session, employeeId, onClose, onSuccess }: WaiterCloseBillModalProps) {
   const [method, setMethod] = useState("CASH");
   const [serviceChargeType, setServiceChargeType] = useState<ServiceChargeOption>("PERCENTAGE");
   const [customAmount, setCustomAmount] = useState("");
@@ -70,6 +71,7 @@ export function WaiterCloseBillModal({ session, onClose, onSuccess }: WaiterClos
         customServiceChargeAmount:
           serviceChargeType === "CUSTOM" ? parseFloat(customAmount) || 0 : undefined,
         splitCount,
+        employeeId,
       } as any);
       toast.success("Conta solicitada com sucesso!");
       onSuccess();

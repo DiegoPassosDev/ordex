@@ -145,12 +145,21 @@ export default function WaiterPage() {
       <WaiterSessionDetail
         session={p.selectedSession}
         restaurantId={p.restaurantId}
+        employeeId={p.employee?.id ?? ""}
         onBack={() => p.setSelectedSession(null)}
         onAcceptTable={p.handleAcceptTable}
         onDeliverOrder={p.handleDeliverOrder}
         onOrderPlaced={p.handleOrderPlaced}
         getSessionStatus={p.getSessionStatus}
         getSessionTotal={p.getSessionTotal}
+        notifications={p.notifications}
+        unreadCount={p.unreadCount}
+        soundEnabled={p.soundEnabled}
+        onToggleSound={p.toggleSound}
+        onMarkRead={p.markRead}
+        onMarkAllRead={p.markAllRead}
+        onClearAll={p.clearAll}
+        typeConfig={p.typeConfig}
       />
     );
   }
@@ -186,7 +195,7 @@ export default function WaiterPage() {
               />
               <button
                 onClick={p.openProfileModal}
-                className="w-9 h-9 rounded-xl bg-gray-700 border border-gray-600 flex items-center justify-center text-gray-400 hover:bg-orange-500/20 hover:text-orange-400 transition-all"
+                className="w-10 h-10 rounded-xl bg-gray-700 border border-gray-600 flex items-center justify-center text-gray-400 hover:bg-orange-500/20 hover:text-orange-400 transition-all"
                 title="Perfil"
               >
                 <User className="w-4 h-4" />

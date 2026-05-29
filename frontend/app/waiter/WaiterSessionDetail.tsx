@@ -3,14 +3,18 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Bell, CheckCheck, Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ItemTimer } from "@/components/ui/ItemTimer";
 import { TableSession, ORDER_STATUS_DOT, ORDER_STATUS_LABEL } from "@/types";
+import type { NotificationType, AppNotification } from "@/hooks/useNotifications";
 import { WaiterAddOrderModal } from "./modal/WaiterAddOrderModal";
 import { WaiterCloseBillModal } from "./modal/WaiterCloseBillModal";
 
 interface SessionDetailProps {
   session: TableSession;
   restaurantId: string;
+  employeeId: string;
   onBack: () => void;
   onAcceptTable: (sessionId: string) => Promise<void>;
   onDeliverOrder: (orderId: string) => Promise<void>;
@@ -19,6 +23,14 @@ interface SessionDetailProps {
     session: TableSession,
   ) => "active" | "bill" | "call";
   getSessionTotal: (session: TableSession) => number;
+  notifications: AppNotification[];
+  unreadCount: number;
+  soundEnabled: boolean;
+  onToggleSound: () => void;
+  onMarkRead: (id: string) => void;
+  onMarkAllRead: () => void;
+  onClearAll: () => void;
+  typeConfig: Record<NotificationType, { icon: string; color: string }>;
 }
 
 const tableStatusConfig = {
@@ -48,12 +60,21 @@ const tableStatusConfig = {
 export function WaiterSessionDetail({
   session,
   restaurantId,
+  employeeId,
   onBack,
   onAcceptTable,
   onDeliverOrder,
   onOrderPlaced,
   getSessionStatus,
   getSessionTotal,
+  notifications,
+  unreadCount,
+  soundEnabled,
+  onToggleSound,
+  onMarkRead,
+  onMarkAllRead,
+  onClearAll,
+  typeConfig,
 }: SessionDetailProps) {
   const [showAddOrder, setShowAddOrder] = useState(false);
   const [showCloseBill, setShowCloseBill] = useState(false);
@@ -100,13 +121,26 @@ export function WaiterSessionDetail({
             </span>
           </div>
 
-          {/* Status */}
-          <span
-            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.border} ${config.text}`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${config.dot} animate-pulse`} />
-            {config.label}
-          </span>
+          {/* Status + Notificação */}
+          <div className="flex items-center gap-2">
+            <span
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.border} ${config.text}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${config.dot} animate-pulse`} />
+              {config.label}
+            </span>
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              soundEnabled={soundEnabled}
+              onToggleSound={onToggleSound}
+              onMarkRead={onMarkRead}
+              onMarkAllRead={onMarkAllRead}
+              onClearAll={onClearAll}
+              typeConfig={typeConfig}
+              className="w-8 h-8 rounded-lg bg-gray-700/50 border-gray-700"
+            />
+          </div>
         </div>
 
         {/* Linha de contexto */}
@@ -137,10 +171,18 @@ export function WaiterSessionDetail({
         {/* Botão "Solicitar Conta" */}
         {!isUnassigned && session.status !== "REQUESTING_BILL" && session.status !== "CLOSED" && (
           <button
-            onClick={() => setShowCloseBill(true)}
-            className="w-full py-3 rounded-2xl bg-orange-500 text-white font-semibold text-base hover:bg-orange-600 transition-all"
+            onClick={() => {
+              const hasOrders = session.orders && session.orders.length > 0;
+              if (hasOrders) setShowCloseBill(true);
+            }}
+            disabled={!session.orders || session.orders.length === 0}
+            className={`w-full py-3 rounded-2xl font-semibold text-base transition-all ${
+              session.orders && session.orders.length > 0
+                ? "bg-orange-500 text-white hover:bg-orange-600"
+                : "bg-gray-700/50 text-gray-500 cursor-not-allowed"
+            }`}
           >
-            Solicitar Conta
+            {session.orders && session.orders.length > 0 ? "Solicitar Conta" : "Nenhum pedido"}
           </button>
         )}
 
@@ -199,6 +241,12 @@ export function WaiterSessionDetail({
                           {item.notes}
                         </span>
                       )}
+                      <ItemTimer
+                        date={order.createdAt}
+                        prepTime={item.menuItem?.prepTimeMin ?? 10}
+                        status={item.status}
+                        statusChangedAt={item.statusChangedAt}
+                      />
                       <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/50 border border-gray-600/50 text-gray-400">
                         <span className={`w-1.5 h-1.5 rounded-full ${ORDER_STATUS_DOT[item.status]}`} />
                         {ORDER_STATUS_LABEL[item.status]}
@@ -249,6 +297,7 @@ export function WaiterSessionDetail({
       {showCloseBill && (
         <WaiterCloseBillModal
           session={session}
+          employeeId={employeeId}
           onClose={() => setShowCloseBill(false)}
           onSuccess={onOrderPlaced}
         />

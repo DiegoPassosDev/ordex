@@ -37,6 +37,7 @@ export function useWaiterPage() {
   const [accessRequest, setAccessRequest] = useState<AccessRequest | null>(null);
   const sessionIdsRef = useRef(new Set<string>());
   const closingSessionIdRef = useRef<string | null>(null);
+  const redirectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     sessionIdsRef.current = new Set(sessions.map((s) => s.id));
@@ -71,8 +72,20 @@ export function useWaiterPage() {
   useEffect(() => {
     if (!selectedSession) return;
     const fresh = sessions.find((s) => s.id === selectedSession.id);
-    if (fresh) setSelectedSession(fresh);
+    if (fresh) {
+      setSelectedSession(fresh);
+    } else if (selectedSession.status !== "CLOSED") {
+      // Se a sessão sumiu da lista e não foi fechada, pode ter sido arquivada
+      setSelectedSession(null);
+    }
   }, [sessions]);
+
+  // Limpa timeout de redirecionamento ao desmontar
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) clearTimeout(redirectTimeoutRef.current);
+    };
+  }, []);
 
   useSocket(
     { type: "restaurant", id: restaurantId },
@@ -95,11 +108,21 @@ export function useWaiterPage() {
           const message =
             reason === "AUTO_CLOSED"
               ? `Mesa ${tableNumber} encerrada pelo cliente`
-              : role === "MANAGER"
-                ? `Mesa ${tableNumber} encerrada pelo gestor`
-                : `Mesa ${tableNumber} foi encerrada`;
+              : reason === "PAYMENT_CLOSED"
+                ? `Mesa ${tableNumber} encerrada — pagamento confirmado`
+                : role === "MANAGER"
+                  ? `Mesa ${tableNumber} encerrada pelo gestor`
+                  : `Mesa ${tableNumber} foi encerrada`;
           addNotification("bill_requested", "Mesa Encerrada", message, tableNumber);
           toast(message, { icon: "🔒" });
+
+          if (selectedSession?.id === data.id) {
+            // Redireciona de forma delicada após a mensagem
+            if (redirectTimeoutRef.current) clearTimeout(redirectTimeoutRef.current);
+            redirectTimeoutRef.current = setTimeout(() => {
+              setSelectedSession(null);
+            }, 2000);
+          }
         }
         loadSessions();
       },
@@ -137,6 +160,8 @@ export function useWaiterPage() {
       },
       bill_requested: (data: any) => {
         const tableNum = data?.table?.number ?? "?";
+        // Garçom que solicitou a conta não deve ver a notificação
+        if (data?.requestedBy && data.requestedBy === employee?.id) return;
         addNotification(
           "bill_requested",
           "Conta Solicitada",
@@ -245,6 +270,7 @@ export function useWaiterPage() {
   }
 
   function handleLogout() {
+    clearAll();
     clearAuth();
     router.push("/login");
   }
