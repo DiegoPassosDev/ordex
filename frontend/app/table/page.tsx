@@ -3,6 +3,7 @@
 import { Suspense, useId, useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ItemTimer } from "@/components/ui/ItemTimer";
 import { useTablePage } from "./useTablePage";
 import {
   ShoppingCart,
@@ -681,6 +682,12 @@ function TablePageInner() {
                       <span className="text-sm text-gray-300 flex-1 truncate">
                         {item.menuItem.name}
                       </span>
+                      <ItemTimer
+                        date={order.createdAt}
+                        prepTime={item.menuItem?.prepTimeMin ?? 10}
+                        status={item.status}
+                        statusChangedAt={item.statusChangedAt}
+                      />
                       <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/50 border border-gray-600/50 text-gray-400">
                         <span className={`w-1.5 h-1.5 rounded-full ${ORDER_STATUS_DOT[item.status]}`} />
                         {ORDER_STATUS_LABEL[item.status]}
@@ -691,14 +698,19 @@ function TablePageInner() {
               </div>
             ))}
             {/* Botão solicitar conta */}
-            {p.orders.length > 0 && !p.billRequested && (
+            {!p.billRequested && (
               <div className="mt-2">
                 <button
-                  onClick={() => p.setShowBillModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-orange-500/10 border border-orange-500/30 text-orange-400 font-semibold text-sm hover:bg-orange-500/20 transition-all"
+                  onClick={() => p.orders.length > 0 && p.setShowBillModal(true)}
+                  disabled={p.orders.length === 0}
+                  className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm transition-all ${
+                    p.orders.length === 0
+                      ? "bg-gray-700/30 border border-gray-600/50 text-gray-500 cursor-not-allowed"
+                      : "bg-orange-500/10 border border-orange-500/30 text-orange-400 hover:bg-orange-500/20"
+                  }`}
                 >
                   <Receipt className="w-4 h-4" />
-                  Solicitar a conta
+                  {p.orders.length > 0 ? "Solicitar a conta" : "Nenhum pedido ainda"}
                 </button>
               </div>
             )}
