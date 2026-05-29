@@ -33,6 +33,8 @@ export class PaymentsService {
           include: { items: true },
         },
         bill: true,
+        guests: true,
+        table: true,
       },
     });
 
@@ -140,7 +142,16 @@ export class PaymentsService {
       include: { table: true },
     });
 
-    this.gateway.notifyTableSessionUpdate(session.restaurantId, closedSession);
+    this.gateway.notifyTableSessionUpdate(session.restaurantId, {
+      ...closedSession,
+      closeReason: 'PAYMENT_CLOSED',
+      closedByRole: 'CASHIER',
+    });
+
+    this.gateway.notifySessionClosedByManager(data.sessionId, {
+      guestIds: session.guests.map((g) => g.id),
+      tableNumber: closedSession.table.number,
+    });
 
     // Cria ou atualiza o Bill
     await this.prisma.bill.upsert({

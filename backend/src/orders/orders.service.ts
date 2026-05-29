@@ -170,16 +170,31 @@ export class OrdersService {
 
     if (dto.status === OrderStatus.DELIVERED) {
       await this.stockService.deductByOrder(id);
+
+      // Itens que já têm statusChangedAt (já passaram por READY) — mantém o timestamp original
+      await this.prisma.orderItem.updateMany({
+        where: { orderId: id, status: { not: OrderStatus.CANCELLED }, statusChangedAt: { not: null } },
+        data: { status: OrderStatus.DELIVERED },
+      });
+
+      // Itens sem statusChangedAt (pularam READY) — marca com timestamp atual
+      await this.prisma.orderItem.updateMany({
+        where: { orderId: id, status: { not: OrderStatus.CANCELLED }, statusChangedAt: null },
+        data: { status: OrderStatus.DELIVERED, statusChangedAt: new Date() },
+      });
     }
+
+    // Recarrega para pegar status atualizados dos itens
+    const finalOrder = await this.findOne(id);
 
     // Notifica cliente e gestor em tempo real
     this.gateway.notifyOrderStatusUpdate(
       existing.session.restaurantId,
       existing.sessionId,
-      order,
+      finalOrder,
     );
 
-    return order;
+    return finalOrder;
   }
 
   async cancel(id: string) {
@@ -198,7 +213,10 @@ export class OrdersService {
 
     await this.prisma.orderItem.update({
       where: { id: itemId },
-      data: { status: dto.status },
+      data: {
+        status: dto.status,
+        statusChangedAt: dto.status === OrderStatus.READY ? new Date() : undefined,
+      },
     });
 
     // Recarrega o pedido com os itens atualizados

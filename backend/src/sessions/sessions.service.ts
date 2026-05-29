@@ -184,6 +184,7 @@ export class SessionsService {
 
     this.gateway.notifyBillRequest(session.restaurantId, id, {
       ...updated,
+      requestedBy: dto.employeeId || null,
       bill: {
         ...bill,
         preferredPaymentMethod: dto.preferredPaymentMethod,

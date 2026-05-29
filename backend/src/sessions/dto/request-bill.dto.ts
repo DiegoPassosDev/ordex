@@ -22,4 +22,8 @@ export class RequestBillDto {
   @IsNumber()
   @Min(1)
   splitCount?: number;
+
+  @IsOptional()
+  @IsString()
+  employeeId?: string;
 }

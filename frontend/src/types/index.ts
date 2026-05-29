@@ -72,6 +72,7 @@ export interface OrderItem {
   notes?: string;
   price: number;
   status: OrderStatus;
+  statusChangedAt?: string | null;
   menuItem: MenuItem;
 }
 

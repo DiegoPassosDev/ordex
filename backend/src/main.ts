@@ -12,14 +12,13 @@ async function bootstrap() {
   );
 
   // CORS configurado para desenvolvimento
-  // Em produção, especifique a URL exata do frontend
   const isProduction = process.env.NODE_ENV === 'production';
   app.enableCors({
-    origin: isProduction ? process.env.FRONTEND_URL : true, // Em dev, permite qualquer origem (necessário para acessar por IP)
+    origin: isProduction ? process.env.FRONTEND_URL : true,
     credentials: true,
   });
 
-  await app.listen(3001, '0.0.0.0'); // Escuta em todos os IPs
+  await app.listen(3001, '0.0.0.0');
 }
 
 bootstrap();
