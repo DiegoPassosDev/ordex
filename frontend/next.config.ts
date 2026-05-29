@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: "bottom-right",
   },
-  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS || "localhost").split(","),
+  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS || "localhost,192.168.18.70").split(","),
 
   async rewrites() {
     return [

@@ -2,21 +2,6 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "@/store/auth.store";
 
-function getSocketUrl() {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-
-  if (typeof window !== "undefined") {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:3001`;
-  }
-
-  return "http://localhost:3001";
-}
-
-const SOCKET_URL = getSocketUrl();
-
 export function useSocket(
   room: { type: "session" | "restaurant"; id: string } | null,
   handlers: Record<string, (data: any) => void>,
@@ -33,17 +18,31 @@ export function useSocket(
   useEffect(() => {
     if (!room?.id || !token) return;
 
-    const socket = io(SOCKET_URL, {
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost";
+
+    const socket = io(`http://${hostname}:3001`, {
       transports: ["websocket"],
       auth: { token },
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
     });
     socketRef.current = socket;
 
+    let loggedError = false;
+
     socket.on("connect", () => {
+      loggedError = false;
       if (room.type === "session") {
         socket.emit("join_session", room.id);
       } else {
         socket.emit("join_restaurant", room.id);
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      if (!loggedError) {
+        console.warn("[socket] connection error:", err.message);
+        loggedError = true;
       }
     });
 

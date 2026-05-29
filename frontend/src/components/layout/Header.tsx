@@ -49,6 +49,7 @@ export function Header({
   
 
   function handleLogout() {
+    clearAll();
     clearAuth();
     router.push("/login");
   }

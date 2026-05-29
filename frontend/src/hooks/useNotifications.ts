@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuthStore } from "@/store/auth.store";
+import { playNotificationSound as playSound, initSound } from "@/lib/sound";
 
 export type NotificationType =
   | "new_order"
@@ -35,29 +36,7 @@ const TYPE_CONFIG: Record<NotificationType, { icon: string; color: string }> = {
 };
 
 function playNotificationSound() {
-  try {
-    const ctx = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.type = "sawtooth";
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      440,
-      ctx.currentTime + 0.15,
-    );
-
-    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.3);
-  } catch {}
+  playSound();
 }
 
 export function useNotifications() {
@@ -71,6 +50,15 @@ export function useNotifications() {
 
   const soundEnabledRef = useRef(soundEnabled);
   soundEnabledRef.current = soundEnabled;
+
+  // Inicializa áudio no primeiro clique (autoplay policy)
+  useEffect(() => {
+    function handler() {
+      initSound();
+      document.removeEventListener("click", handler);
+    }
+    document.addEventListener("click", handler, { once: true });
+  }, []);
 
   function toggleSound() {
     setSoundEnabled((prev) => {

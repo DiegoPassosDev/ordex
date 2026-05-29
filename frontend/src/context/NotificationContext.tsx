@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { useSocket } from "@/hooks/useSocket";
+import { playBeepSound, initSound } from "@/lib/sound";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -69,31 +70,12 @@ const NotificationContext = createContext<NotificationContextValue | null>(
 );
 
 const SOUND_KEY = "ordex-sound-enabled";
+const NOTIF_KEY = "ordex-notifications";
 
 // ── Som ──────────────────────────────────────────────────────────────────────
 
 function playSound() {
-  try {
-    const ctx = new (
-      window.AudioContext || (window as any).webkitAudioContext
-    )();
-
-    const beep = (startTime: number, freq: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, startTime);
-      gain.gain.setValueAtTime(0.3, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
-      osc.start(startTime);
-      osc.stop(startTime + 0.15);
-    };
-
-    beep(ctx.currentTime, 660);
-    beep(ctx.currentTime + 0.2, 880);
-  } catch {}
+  playBeepSound();
 }
 
 // ── Provider ─────────────────────────────────────────────────────────────────
@@ -105,7 +87,17 @@ export function NotificationProvider({
 }) {
   const { employee, restaurantId } = useAuthStore();
 
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem(NOTIF_KEY);
+      if (!raw) return [];
+      const parsed: AppNotification[] = JSON.parse(raw);
+      return parsed.map((n) => ({ ...n, timestamp: new Date(n.timestamp) }));
+    } catch {
+      return [];
+    }
+  });
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     const stored = localStorage.getItem(SOUND_KEY);
@@ -159,7 +151,22 @@ export function NotificationProvider({
 
   function clearAll() {
     setNotifications([]);
+    localStorage.removeItem(NOTIF_KEY);
   }
+
+  // Persiste notificações no localStorage
+  useEffect(() => {
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(notifications));
+  }, [notifications]);
+
+  // Inicializa áudio no primeiro clique (autoplay policy)
+  useEffect(() => {
+    function handler() {
+      initSound();
+      document.removeEventListener("click", handler);
+    }
+    document.addEventListener("click", handler, { once: true });
+  }, []);
 
   // Só conecta o socket se for um funcionário (manager, waiter, kitchen…)
   // Clientes não recebem notificações globais

@@ -13,6 +13,7 @@ interface NotificationBellProps {
   onMarkAllRead: () => void;
   onClearAll: () => void;
   typeConfig: Record<NotificationType, { icon: string; color: string }>;
+  className?: string;
 }
 
 function timeAgo(date: Date): string {
@@ -34,6 +35,7 @@ export function NotificationBell({
   onMarkAllRead,
   onClearAll,
   typeConfig,
+  className = "",
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -49,7 +51,11 @@ export function NotificationBell({
   }, []);
 
   function handleOpen() {
-    setOpen((prev) => !prev);
+    const willBeOpen = !open;
+    setOpen(willBeOpen);
+    if (willBeOpen && unreadCount > 0) {
+      onMarkAllRead();
+    }
   }
 
   return (
@@ -57,7 +63,7 @@ export function NotificationBell({
       {/* Botão do sino */}
       <button
         onClick={handleOpen}
-        className="relative w-10 h-10 rounded-xl bg-gray-800 border border-gray-600 shadow-sm flex items-center justify-center text-gray-400 hover:bg-gray-700 hover:text-white transition-all"
+        className={`relative w-10 h-10 rounded-xl bg-gray-800 border border-gray-600 shadow-sm flex items-center justify-center text-gray-400 hover:bg-gray-700 hover:text-white transition-all ${className}`}
       >
         <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
