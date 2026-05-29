@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ItemTimer } from "@/components/ui/ItemTimer";
 import {
   LayoutGrid,
   ClipboardList,
@@ -145,17 +146,25 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Itens */}
-                    <div className="space-y-0.5 mb-2">
+                    <div className="space-y-1.5 mb-2">
                       {order.items.map((item, i) => (
-                        <p key={i} className="text-xs text-gray-400">
-                          {item.quantity}x {item.menuItem?.name}
-                          {item.notes && (
-                            <span className="text-gray-500 italic">
-                              {" "}
-                              — {item.notes}
-                            </span>
-                          )}
-                        </p>
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold shrink-0">
+                            {item.quantity}
+                          </span>
+                          <span className="text-xs text-gray-200 flex-1 min-w-0 truncate">
+                            {item.menuItem?.name}
+                            {item.notes && (
+                              <span className="text-gray-500 italic"> — {item.notes}</span>
+                            )}
+                          </span>
+                          <ItemTimer
+                            date={order.createdAt}
+                            prepTime={item.menuItem?.prepTimeMin ?? 10}
+                            status={item.status}
+                            statusChangedAt={item.statusChangedAt}
+                          />
+                        </div>
                       ))}
                     </div>
 

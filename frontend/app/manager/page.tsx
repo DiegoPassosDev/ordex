@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
+import { ItemTimer } from "@/components/ui/ItemTimer";
 import { useAuthStore } from "@/store/auth.store";
 import {
   LayoutGrid,
@@ -17,7 +18,7 @@ import {
   Loader2,
   LogOut,
 } from "lucide-react";
-import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
+import { ORDER_STATUS_DOT, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
@@ -239,32 +240,44 @@ export default function ManagerDashboard() {
                   {todayOrders.slice(0, 8).map((order) => (
                     <div
                       key={order.id}
-                      className="flex items-start justify-between p-3 rounded-xl bg-gray-800 gap-2"
+                      className="p-3 rounded-xl bg-gray-800"
                     >
-                      <div className="flex items-start gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-orange-400">
-                            {order.session?.table?.number ?? "?"}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-orange-400">
+                              {order.session?.table?.number ?? "?"}
+                            </span>
+                          </div>
+                          <span className="text-xs font-medium text-gray-100">
+                            Mesa {order.session?.table?.number ?? "?"}
                           </span>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-100 truncate">
-                            {order.items.map((i) => i.menuItem?.name).join(", ")}
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {order.session?.waiter?.name || "Sem garçom"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className="text-xs text-gray-500">
                           {getOrderElapsed(order)}
                         </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${ORDER_STATUS_COLOR[order.status]}`}
-                        >
-                          {ORDER_STATUS_LABEL[order.status]}
-                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {order.items.map((item, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-4 h-4 rounded bg-gray-700 flex items-center justify-center text-gray-300 text-[10px] font-bold shrink-0">
+                              {item.quantity}
+                            </span>
+                            <span className="text-xs text-gray-400 flex-1 min-w-0 truncate">
+                              {item.menuItem?.name}
+                            </span>
+                            <ItemTimer
+                              date={order.createdAt}
+                              prepTime={item.menuItem?.prepTimeMin ?? 10}
+                              status={item.status}
+                              statusChangedAt={item.statusChangedAt}
+                            />
+                            <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-700/50 border border-gray-600/50 text-gray-400">
+                              <span className={`w-1.5 h-1.5 rounded-full ${ORDER_STATUS_DOT[item.status]}`} />
+                              {ORDER_STATUS_LABEL[item.status]}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}

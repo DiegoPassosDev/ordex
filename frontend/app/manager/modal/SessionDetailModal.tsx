@@ -2,6 +2,7 @@
 
 import { Loader2, X, UserCheck, Clock, DollarSign, Users, AlertCircle } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ItemTimer } from "@/components/ui/ItemTimer";
 import { Button } from "@/components/ui/Button";
 import { TableSession, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
 import type { DashboardSession } from "../useManagerDashboard";
@@ -162,7 +163,7 @@ export function SessionDetailModal({
                         <span className="w-5 h-5 rounded-md bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
                           {item.quantity}
                         </span>
-                        <span className="text-sm text-gray-200">
+                        <span className="text-sm text-gray-200 flex-1">
                           {item.menuItem?.name}
                         </span>
                         {item.notes && (
@@ -170,6 +171,12 @@ export function SessionDetailModal({
                             — {item.notes}
                           </span>
                         )}
+                        <ItemTimer
+                          date={order.createdAt}
+                          prepTime={item.menuItem?.prepTimeMin ?? 10}
+                          status={item.status}
+                          statusChangedAt={item.statusChangedAt}
+                        />
                       </div>
                     ))}
                   </div>
