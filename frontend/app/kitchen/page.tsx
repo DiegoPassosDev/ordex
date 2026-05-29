@@ -1,50 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { ChefHat, Clock, CheckCheck, Flame, Loader2 } from "lucide-react";
+import { ItemTimer } from "@/components/ui/ItemTimer";
+import { ExpandableText } from "@/components/ui/ExpandableText";
+import { ChefHat, CheckCheck, Flame, Loader2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { CustomToaster } from "@/components/ui/Toast";
 import { useKitchenPage } from "./useKitchenPage";
-
-function getElapsedMinutes(date: string) {
-  return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
-}
-
-function ElapsedTimer({ date, maxPrepTime }: { date: string; maxPrepTime: number }) {
-  const [minutes, setMinutes] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    setMinutes(Math.floor((Date.now() - new Date(date).getTime()) / 60000));
-    const interval = setInterval(() => {
-      setMinutes(Math.floor((Date.now() - new Date(date).getTime()) / 60000));
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [date]);
-
-  if (!mounted) return null;
-
-  const ratio = maxPrepTime > 0 ? minutes / maxPrepTime : 0;
-  const isLate = ratio >= 1;
-  const isWarning = ratio >= 0.8;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-        isLate
-          ? "bg-red-500/20 text-red-400 border border-red-500/30"
-          : isWarning
-            ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-            : "bg-gray-700 text-gray-400 border border-gray-600"
-      }`}
-    >
-      <Clock className="w-3 h-3" />
-      {minutes}/{maxPrepTime} min
-    </span>
-  );
-}
 
 export default function KitchenPage() {
   const p = useKitchenPage();
@@ -156,26 +118,10 @@ export default function KitchenPage() {
               )}
 
               {col.orders.map((order) => {
-                const maxPrepTime = Math.max(
-                  ...order.items.map(
-                    (i: any) => i.menuItem?.prepTimeMin ?? 10,
-                  ),
-                  1,
-                );
-                const elapsed = getElapsedMinutes(order.createdAt);
-                const ratio = elapsed / maxPrepTime;
-                const isOverdue = ratio >= 1;
-
                 return (
                   <div
                     key={order.id}
-                    className={`bg-gray-800 rounded-2xl p-4 border transition-all ${
-                      isOverdue
-                        ? "border-red-500/50 shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
-                        : ratio >= 0.8
-                          ? "border-orange-500/40"
-                          : "border-gray-700"
-                    }`}
+                    className="bg-gray-800 rounded-2xl p-4 border border-gray-700"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -188,7 +134,6 @@ export default function KitchenPage() {
                           Mesa {order.session?.table?.number ?? "?"}
                         </span>
                       </div>
-                      <ElapsedTimer date={order.createdAt} maxPrepTime={maxPrepTime} />
                     </div>
 
                     {/* Itens com ação individual */}
@@ -196,40 +141,53 @@ export default function KitchenPage() {
                       {order.items.map((item, i) => {
                         const action = itemActions[item.status];
                         return (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold shrink-0 mt-0.5">
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-md bg-gray-700 flex items-center justify-center text-gray-300 text-xs font-bold shrink-0">
                               {item.quantity}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-gray-100 text-sm font-medium">
-                                {item.menuItem?.name}
+                              <p className="text-gray-100 text-sm font-medium leading-tight">
+                                <ExpandableText text={item.menuItem?.name ?? "?"} maxLen={35} />
                               </p>
+                              {item.menuItem?.description && (
+                                <p className="text-gray-500 text-xs mt-0.5 leading-tight">
+                                  <ExpandableText text={item.menuItem.description} maxLen={40} />
+                                </p>
+                              )}
                               {item.notes && (
-                                <p className="text-gray-400 text-xs mt-0.5">
+                                <p className="text-orange-300/80 text-xs mt-0.5 leading-tight">
                                   ⚠️ {item.notes}
                                 </p>
                               )}
                             </div>
-                            {action && (
-                              <button
-                                onClick={() =>
-                                  p.updateItemStatus(order.id, item.id, action.next)
-                                }
-                                className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
-                                  action.next === "PREPARING"
-                                    ? "bg-orange-500 hover:bg-orange-600 text-white"
-                                    : "bg-green-500 hover:bg-green-600 text-white"
-                                }`}
-                              >
-                                {action.label}
-                              </button>
-                            )}
-                            {item.status === "READY" && (
-                              <span className="shrink-0 text-xs text-green-400 font-medium flex items-center gap-1">
-                                <CheckCheck className="w-3.5 h-3.5" />
-                                Pronto
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <ItemTimer
+                                date={order.createdAt}
+                                prepTime={item.menuItem?.prepTimeMin ?? 10}
+                                status={item.status}
+                                statusChangedAt={item.statusChangedAt}
+                              />
+                              {action && (
+                                <button
+                                  onClick={() =>
+                                    p.updateItemStatus(order.id, item.id, action.next)
+                                  }
+                                  className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-all ${
+                                    action.next === "PREPARING"
+                                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                      : "bg-green-500 hover:bg-green-600 text-white"
+                                  }`}
+                                >
+                                  {action.label}
+                                </button>
+                              )}
+                              {item.status === "READY" && (
+                                <span className="shrink-0 text-xs text-green-400 font-medium flex items-center gap-1">
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                  Pronto
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
