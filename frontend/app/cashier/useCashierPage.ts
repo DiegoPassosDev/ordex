@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/Toast";
+import { useNotificationContext } from "@/context/NotificationContext";
 
 export const METHOD_LABEL: Record<string, string> = {
   CASH: "Dinheiro", PIX: "Pix", DEBIT: "Débito", CREDIT: "Crédito",
@@ -16,6 +17,7 @@ export const METHOD_LABEL: Record<string, string> = {
 export function useCashierPage() {
   useRequireAuth("CASHIER");
   const { employee, clearAuth } = useAuthStore();
+  const { clearAll } = useNotificationContext();
   const router = useRouter();
   const restaurantId = employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
 
@@ -23,6 +25,7 @@ export function useCashierPage() {
   const [debts, setDebts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<any>(null);
+  const processingRef = useRef(false);
   const [billData, setBillData] = useState<any>(null);
   const [loadingBill, setLoadingBill] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -48,7 +51,14 @@ export function useCashierPage() {
         toast("Mesa pedindo conta!", { icon: "🔔" });
       },
       new_order: () => loadAll(),
-      table_session_updated: () => loadAll(),
+      table_session_updated: (data: any) => {
+        if (data?.status === "CLOSED" && selectedSession?.id === data.id && !processingRef.current) {
+          toast(`Mesa ${data?.table?.number ?? "?"} encerrada`, { icon: "🔒" });
+          setSelectedSession(null);
+          setBillData(null);
+        }
+        loadAll();
+      },
     },
   );
 
@@ -113,6 +123,7 @@ export function useCashierPage() {
     }
 
     setProcessing(true);
+    processingRef.current = true;
     try {
       await api.post("/payments", {
         sessionId: selectedSession.id,
@@ -133,6 +144,7 @@ export function useCashierPage() {
       toast.error(msg);
     } finally {
       setProcessing(false);
+      processingRef.current = false;
     }
   }
 
@@ -157,6 +169,7 @@ export function useCashierPage() {
   }
 
   function handleLogout() {
+    clearAll();
     clearAuth();
     router.push("/login");
   }

@@ -76,11 +76,11 @@ export default function CashierPage() {
   const p = useCashierPage();
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-900 flex flex-col">
       <CustomToaster />
 
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40 px-4 sm:px-6 py-2">
+      <div className="bg-gray-800 border-b border-gray-700 shrink-0 px-4 sm:px-6 py-2">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
@@ -157,7 +157,13 @@ export default function CashierPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <div
+        className={
+          p.tab === "sessions"
+            ? "flex-1 flex flex-col overflow-hidden px-4 sm:px-6"
+            : "px-4 sm:px-6 py-6 overflow-y-auto"
+        }
+      >
         {p.loading && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
@@ -166,9 +172,11 @@ export default function CashierPage() {
 
         {/* Tab Mesas */}
         {!p.loading && p.tab === "sessions" && (
-          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
+          <div className="flex-1 max-w-7xl mx-auto w-full pt-3 flex flex-col overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 min-h-0">
             {/* ── Lista de mesas ── */}
-            <div className="flex flex-col gap-3 h-full">
+            <div className="flex flex-col min-h-0">
+              <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
               {p.billSessions.length > 0 && (
                 <>
                   <p className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -274,17 +282,18 @@ export default function CashierPage() {
               )}
 
               {p.sessions.length === 0 && (
-                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center h-full py-20">
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center py-20">
                   <UtensilsCrossed className="w-10 h-10 text-gray-600 mb-3" />
                   <p className="text-gray-500 text-sm text-center px-4">
                     Nenhuma mesa aberta no momento
                   </p>
                 </div>
               )}
+              </div>
 
               {/* Rodapé — total geral */}
               {p.sessions.length > 0 && (
-                <div className="mt-auto pt-3 border-t border-gray-700 flex items-center justify-between px-1">
+                <div className="shrink-0 pt-3 border-t border-gray-700 flex items-center justify-between px-1">
                   <span className="text-xs text-gray-500">Total em aberto</span>
                   <span className="text-sm font-bold text-green-400">
                     R$ {p.overallTotal.toFixed(2)}
@@ -294,25 +303,25 @@ export default function CashierPage() {
             </div>
 
             {/* ── Coluna central: consumo + totais ── */}
-            <div className="min-w-0">
+            <div className="min-w-0 min-h-0 overflow-y-auto flex flex-col">
               {!p.selectedSession ? (
-                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center h-full py-20">
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center py-20 self-start w-full">
                   <Receipt className="w-10 h-10 text-gray-600 mb-3" />
                   <p className="text-gray-500 text-sm text-center px-4">
                     Selecione uma mesa
                   </p>
                 </div>
               ) : p.loadingBill ? (
-                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex items-center justify-center h-full py-20">
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl flex items-center justify-center py-20 self-start w-full">
                   <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
                 </div>
               ) : (
                 p.billData && (
-                  <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col max-h-[calc(100vh-150px)] overflow-hidden">
+                  <div className="bg-gray-800 border border-gray-700 rounded-2xl flex flex-col overflow-hidden w-full">
                     {/* Cabeçalho */}
-                    <div className="flex items-center justify-between gap-4 py-3 px-4 border-b border-gray-700 shrink-0">
+                    <div className="flex items-center justify-between gap-4 py-2 px-4 border-b border-gray-700 shrink-0">
                       <div className="flex items-center gap-2">
-                        <div className="h-7 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center px-2">
+                        <div className="h-6 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center px-2">
                           <span className="text-orange-400 text-xs font-bold leading-none whitespace-nowrap">
                             Mesa {p.selectedSession.table?.number}
                           </span>
@@ -365,9 +374,9 @@ export default function CashierPage() {
                     )}
 
                     {/* Conteúdo lado a lado */}
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                       {/* ── Esquerda: Consumo + Totais ── */}
-                      <div className="flex-1 overflow-y-auto px-4 py-3">
+                      <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                           Consumo ·
                           <span className="text-[10px] text-gray-500 font-normal normal-case">
@@ -463,10 +472,10 @@ export default function CashierPage() {
                       </div>
 
                       {/* ── Divider vertical ── */}
-                      <div className="w-px bg-gray-700 shrink-0" />
+                      <div className="hidden lg:block w-px bg-gray-700 shrink-0" />
 
                       {/* ── Direita: Pagamento ── */}
-                      <div className="w-[340px] overflow-y-auto px-4 py-3 shrink-0 space-y-3">
+                      <div className="w-full lg:w-[340px] overflow-y-auto px-4 py-3 shrink-0 space-y-3 min-h-0">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-3">
                           Pagamento
                         </span>
@@ -486,7 +495,7 @@ export default function CashierPage() {
                                   onClick={() => p.setMethod(m.value)}
                                   className={`flex items-center gap-1.5 p-2 rounded-xl border text-xs font-medium transition-all ${
                                     sel
-                                      ? "bg-green-500/15 border-green-500/50 text-green-400 font-semibold"
+                                      ? `${m.bg} ${m.border} ${m.color} font-semibold`
                                       : "bg-gray-800/50 border-gray-600/50 text-gray-400 hover:border-gray-500"
                                   }`}
                                 >
@@ -592,6 +601,7 @@ export default function CashierPage() {
                 )
               )}
             </div>
+          </div>
           </div>
         )}
 
