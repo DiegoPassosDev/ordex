@@ -338,15 +338,40 @@ export default function TablesPage() {
                 onClick={() => {
                   const win = window.open("", "_blank");
                   if (!win) return;
+                  const doc = win.document;
                   const tableNum = tables.find(
                     (t) => t.id === selectedTableId,
                   )?.number;
-                  win.document.write(`
-                    <html><head><title>Mesa ${tableNum}</title>
-                    <style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial;background:white}.c{text-align:center;padding:40px;border:2px solid #e5e7eb;border-radius:24px}.logo{font-size:24px;font-weight:bold;color:#f97316;margin-bottom:8px}.name{font-size:18px;font-weight:600;color:#1f2937;margin-bottom:20px}img{width:250px;height:250px}.hint{margin-top:16px;font-size:13px;color:#6b7280}</style>
-                    </head><body><div class="c"><div class="logo">Ordex</div><div class="name">Mesa ${tableNum}</div><img src="${qrCodeImage}"/><div class="hint">Escaneie para fazer seu pedido</div></div><script>window.onload=()=>{window.print();window.close()}</script></body></html>
-                  `);
-                  win.document.close();
+
+                  const style = doc.createElement("style");
+                  style.textContent =
+                    "body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial;background:white}.c{text-align:center;padding:40px;border:2px solid #e5e7eb;border-radius:24px}.logo{font-size:24px;font-weight:bold;color:#f97316;margin-bottom:8px}.name{font-size:18px;font-weight:600;color:#1f2937;margin-bottom:20px}img{width:250px;height:250px}.hint{margin-top:16px;font-size:13px;color:#6b7280}";
+                  doc.head.appendChild(style);
+
+                  const container = doc.createElement("div");
+                  container.className = "c";
+
+                  const logoEl = doc.createElement("div");
+                  logoEl.className = "logo";
+                  logoEl.textContent = "Ordex";
+                  container.appendChild(logoEl);
+
+                  const nameEl = doc.createElement("div");
+                  nameEl.className = "name";
+                  nameEl.textContent = `Mesa ${tableNum}`;
+                  container.appendChild(nameEl);
+
+                  const img = doc.createElement("img");
+                  img.src = qrCodeImage;
+                  img.onload = () => { win.print(); win.close(); };
+                  container.appendChild(img);
+
+                  const hint = doc.createElement("div");
+                  hint.className = "hint";
+                  hint.textContent = "Escaneie para fazer seu pedido";
+                  container.appendChild(hint);
+
+                  doc.body.appendChild(container);
                 }}
               >
                 Imprimir

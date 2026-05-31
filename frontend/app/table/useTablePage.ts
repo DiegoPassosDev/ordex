@@ -12,6 +12,7 @@ import { useTableAccessAlerts } from "@/hooks/useTableAccessAlerts";
 import { Category, Order } from "@/types";
 import { toast } from "@/components/ui/Toast";
 import { useAppModal } from "@/context/AppModalContext";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export type Tab = "menu" | "orders";
 
@@ -128,7 +129,7 @@ export function useTablePage() {
   // ── Derived values ────────────────────────────────────────────────────────
   const TABLE_ID = tableIdFromUrl || tableIdFromStore;
   const hasTable = !!TABLE_ID;
-  const RESTAURANT_ID = restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+  const RESTAURANT_ID = restaurantId || RESTAURANT_ID_FALLBACK;
   const cartTotal = cart.reduce((acc, c) => acc + c.price * c.quantity, 0);
   const cartCount = cart.reduce((acc, c) => acc + c.quantity, 0);
   const activeOrders = orders.filter(
@@ -278,12 +279,8 @@ export function useTablePage() {
     );
 
     const storeState = useAuthStore.getState();
-
-    const storeTableId = storeState.tableId;
     const storeRestaurantId = storeState.restaurantId;
     const storeSessionId = storeState.sessionId;
-
-    const effectiveTableId = urlTableId || storeTableId;
 
     // ✅ Já possui sessão salva → apenas recarrega dados
     if (storeSessionId && storeRestaurantId) {
@@ -292,22 +289,27 @@ export function useTablePage() {
       return;
     }
 
-    // ✅ Não possui sessão → identifica mesa novamente
-    if (effectiveTableId) {
+    // ✅ Não tem sessão salva → limpa tableId do store para forçar scan
+    if (storeState.tableId) {
+      setTableId("");
+    }
+
+    // ✅ Tem tableId na URL (vindo do login ou de link salvo)
+    if (urlTableId) {
       const currentGuest = useAuthStore.getState().guest;
 
       if (!currentGuest?.id) {
-        // Não está logado — redireciona para login de cliente
-        // preservando o tableId na URL para entrar direto após o login
-        router.push(`/login/customer?tableId=${effectiveTableId}`);
+        // Não está logado — redireciona para login preservando o tableId
+        router.push(`/login/customer?tableId=${urlTableId}`);
         return;
       }
 
-      if (!waitingForAccess && !pendingSessionId) {
-        identifyTable(effectiveTableId);
-      }
+      // Está logado mas sem sessão salva — limpa URL e obriga scan presencial
+      window.history.replaceState({}, "", "/table");
+      setTableId("");
+      return;
     }
-  }, [hasHydrated, guest?.id, waitingForAccess, pendingSessionId]);
+  }, [hasHydrated, guest?.id, setTableId]);
 
   // ── Polling ao voltar do standby — recarrega dados perdidos pelo WebSocket ──
   useEffect(() => {

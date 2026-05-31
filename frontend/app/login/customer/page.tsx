@@ -144,7 +144,7 @@ function LoginCustomerInner() {
         </p>
 
         <p className="text-center text-xs text-gray-500 mt-4">
-          Suporte: contato@ordex.com.br
+          Suporte: fluixit@gmail.com
         </p>
       </div>
     </div>
