@@ -1,4 +1,4 @@
-import ms from 'ms';
+import * as ms from 'ms';
 import { Module } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { EmployeesController } from './employees.controller';
