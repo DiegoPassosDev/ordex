@@ -15,6 +15,7 @@ import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('menu')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,9 +31,17 @@ export class MenuController {
   }
 
   @Get('categories/restaurant/:restaurantId')
-  @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER', 'GUEST')
+  @Roles('GUEST', 'MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
+  @UseGuards(RestaurantAccessGuard)
   findCategories(@Param('restaurantId') restaurantId: string) {
     return this.menuService.findCategoriesByRestaurant(restaurantId);
+  }
+
+  @Get('items/restaurant/:restaurantId')
+  @Roles('GUEST', 'MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
+  @UseGuards(RestaurantAccessGuard)
+  findAllItems(@Param('restaurantId') restaurantId: string) {
+    return this.menuService.findAllItems(restaurantId);
   }
 
   @Delete('categories/:id')
@@ -47,12 +56,6 @@ export class MenuController {
   @Roles('MANAGER')
   createItem(@Body() dto: CreateMenuItemDto) {
     return this.menuService.createItem(dto);
-  }
-
-  @Get('items/restaurant/:restaurantId')
-  @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER', 'GUEST')
-  findAllItems(@Param('restaurantId') restaurantId: string) {
-    return this.menuService.findAllItems(restaurantId);
   }
 
   @Get('items/:id')

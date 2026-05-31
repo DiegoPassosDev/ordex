@@ -14,6 +14,7 @@ import { EmployeeLoginDto } from './dto/employee-login.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('employees')
 export class EmployeesController {
@@ -32,7 +33,7 @@ export class EmployeesController {
   }
 
   @Get('restaurant/:restaurantId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, RestaurantAccessGuard)
   @Roles('MANAGER')
   findAll(@Param('restaurantId') restaurantId: string) {
     return this.employeesService.findAllByRestaurant(restaurantId);

@@ -13,6 +13,7 @@ import { CreateTableDto } from './dto/create-table.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('tables')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +28,7 @@ export class TablesController {
 
   @Get('restaurant/:restaurantId')
   @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
+  @UseGuards(RestaurantAccessGuard)
   findAllByRestaurant(
     @Param('restaurantId') restaurantId: string,
     @Query('available') available?: string,

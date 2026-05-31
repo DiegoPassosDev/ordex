@@ -14,6 +14,7 @@ import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('suppliers')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,6 +28,7 @@ export class SuppliersController {
   }
 
   @Get('restaurant/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   findAll(@Param('restaurantId') restaurantId: string) {
     return this.service.findAll(restaurantId);
   }

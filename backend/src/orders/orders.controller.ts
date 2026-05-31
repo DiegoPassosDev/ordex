@@ -16,6 +16,7 @@ import { UpdateItemStatusDto } from './dto/update-item-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,6 +37,7 @@ export class OrdersController {
 
   @Get('restaurant/:restaurantId')
   @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
+  @UseGuards(RestaurantAccessGuard)
   findByRestaurant(
     @Param('restaurantId') restaurantId: string,
     @Query('date') date?: string,

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -18,6 +19,7 @@ import { RespondTableAccessDto } from './dto/respond-table-access.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('sessions')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,6 +34,7 @@ export class SessionsController {
 
   @Get('restaurant/:restaurantId/active')
   @Roles('MANAGER', 'WAITER', 'KITCHEN', 'BAR', 'CASHIER')
+  @UseGuards(RestaurantAccessGuard)
   findActive(@Param('restaurantId') restaurantId: string) {
     return this.sessionsService.findActiveByRestaurant(restaurantId);
   }
@@ -52,6 +55,7 @@ export class SessionsController {
   }
 
   @Get(':id/access-requests/pending')
+  @Roles('GUEST', 'MANAGER', 'WAITER')
   getPendingAccessRequests(@Param('id') id: string) {
     return this.sessionsService.getPendingAccessRequests(id);
   }
@@ -82,7 +86,14 @@ export class SessionsController {
 
   @Post(':id/leave')
   @Roles('GUEST')
-  leaveSession(@Param('id') id: string, @Body() body: { guestId: string }) {
+  leaveSession(
+    @Param('id') id: string,
+    @Body() body: { guestId: string },
+    @Req() req: any,
+  ) {
+    if (body.guestId !== req.user?.id) {
+      throw new ForbiddenException('Você só pode remover a si mesmo da mesa.');
+    }
     return this.sessionsService.leaveSession(id, body.guestId);
   }
 
@@ -105,6 +116,10 @@ export class SessionsController {
     @Body() dto: RespondTableAccessDto,
     @Req() req: any,
   ) {
-    return this.sessionsService.respondAccess(requestId, dto.approved, req.user.id);
+    return this.sessionsService.respondAccess(
+      requestId,
+      dto.approved,
+      req.user.id,
+    );
   }
 }

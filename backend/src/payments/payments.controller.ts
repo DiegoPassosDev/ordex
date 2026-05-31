@@ -12,6 +12,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,12 +33,14 @@ export class PaymentsController {
 
   @Get('restaurant/:restaurantId/pending')
   @Roles('CASHIER', 'MANAGER')
+  @UseGuards(RestaurantAccessGuard)
   getPending(@Param('restaurantId') restaurantId: string) {
     return this.service.getPendingSessions(restaurantId);
   }
 
   @Get('restaurant/:restaurantId/report')
   @Roles('CASHIER', 'MANAGER')
+  @UseGuards(RestaurantAccessGuard)
   getReport(
     @Param('restaurantId') restaurantId: string,
     @Query('date') date?: string,
@@ -47,6 +50,7 @@ export class PaymentsController {
 
   @Get('restaurant/:restaurantId/debts')
   @Roles('CASHIER', 'MANAGER')
+  @UseGuards(RestaurantAccessGuard)
   getDebts(@Param('restaurantId') restaurantId: string) {
     return this.service.getDebts(restaurantId);
   }

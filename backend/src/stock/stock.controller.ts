@@ -12,6 +12,16 @@ import { StockService } from './stock.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RestaurantAccessGuard } from '../common/guards/restaurant-access.guard';
+import { CreateStockItemDto } from './dto/create-stock-item.dto';
+import { UpdateStockItemDto } from './dto/update-stock-item.dto';
+import {
+  CreateStockEntryDto,
+  CreateStockEntryGroupDto,
+} from './dto/create-stock-entry.dto';
+import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
+import { CreateStockExitDto } from './dto/create-stock-exit.dto';
+import { SetIngredientsDto } from './dto/set-ingredients.dto';
 
 @Controller('stock')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,11 +31,12 @@ export class StockController {
 
   // Itens
   @Post('items')
-  createItem(@Body() body: any) {
-    return this.service.createItem(body);
+  createItem(@Body() dto: CreateStockItemDto) {
+    return this.service.createItem(dto);
   }
 
   @Get('items/restaurant/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   findAllItems(@Param('restaurantId') restaurantId: string) {
     return this.service.findAllItems(restaurantId);
   }
@@ -36,8 +47,8 @@ export class StockController {
   }
 
   @Patch('items/:id')
-  updateItem(@Param('id') id: string, @Body() body: any) {
-    return this.service.updateItem(id, body);
+  updateItem(@Param('id') id: string, @Body() dto: UpdateStockItemDto) {
+    return this.service.updateItem(id, dto);
   }
 
   @Delete('items/:id')
@@ -47,22 +58,22 @@ export class StockController {
 
   // Entradas
   @Post('entries')
-  createEntry(@Body() body: any) {
-    // Se vier array de items, usa createEntryGroup
-    if (body.items && Array.isArray(body.items)) {
-      return this.service.createEntryGroup(body);
+  createEntry(@Body() dto: CreateStockEntryDto | CreateStockEntryGroupDto) {
+    if ('items' in dto && Array.isArray(dto.items)) {
+      return this.service.createEntryGroup(dto);
     }
-    return this.service.createEntry(body);
+    return this.service.createEntry(dto as CreateStockEntryDto);
   }
 
   @Get('entries/restaurant/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   findEntries(@Param('restaurantId') restaurantId: string) {
     return this.service.findEntries(restaurantId);
   }
 
   @Patch('entries/:id')
-  updateEntry(@Param('id') id: string, @Body() body: any) {
-    return this.service.updateEntry(id, body);
+  updateEntry(@Param('id') id: string, @Body() dto: UpdateStockEntryDto) {
+    return this.service.updateEntry(id, dto);
   }
 
   @Delete('entries/:id')
@@ -72,11 +83,12 @@ export class StockController {
 
   // Saídas
   @Post('exits')
-  createExit(@Body() body: any) {
-    return this.service.createExit(body);
+  createExit(@Body() dto: CreateStockExitDto) {
+    return this.service.createExit(dto);
   }
 
   @Get('exits/restaurant/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   findExits(@Param('restaurantId') restaurantId: string) {
     return this.service.findExits(restaurantId);
   }
@@ -85,9 +97,9 @@ export class StockController {
   @Post('recipes/:menuItemId')
   setIngredients(
     @Param('menuItemId') menuItemId: string,
-    @Body() body: { ingredients: any[] },
+    @Body() dto: SetIngredientsDto,
   ) {
-    return this.service.setIngredients(menuItemId, body.ingredients);
+    return this.service.setIngredients(menuItemId, dto.ingredients);
   }
 
   @Get('recipes/:menuItemId')
@@ -97,11 +109,13 @@ export class StockController {
 
   // Relatórios
   @Get('report/stock/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   getStockReport(@Param('restaurantId') restaurantId: string) {
     return this.service.getStockReport(restaurantId);
   }
 
   @Get('report/profit/:restaurantId')
+  @UseGuards(RestaurantAccessGuard)
   getProfitReport(@Param('restaurantId') restaurantId: string) {
     return this.service.getProfitReport(restaurantId);
   }
