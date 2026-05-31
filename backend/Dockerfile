@@ -9,6 +9,8 @@ COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile
 
+RUN npx prisma generate
+
 COPY . .
 
 RUN pnpm build
@@ -23,6 +25,8 @@ COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile --prod
+
+RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
 
