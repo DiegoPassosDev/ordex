@@ -9,7 +9,7 @@ COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile
 
-RUN npx prisma generate
+RUN pnpm exec prisma generate
 
 COPY . .
 
@@ -26,10 +26,10 @@ COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile --prod
 
-RUN npx prisma generate
+RUN pnpm exec prisma generate
 
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main"]
