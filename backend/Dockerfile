@@ -26,10 +26,11 @@ COPY prisma ./prisma/
 
 RUN pnpm install --frozen-lockfile --prod
 
-RUN pnpm exec prisma generate
+COPY --from=builder /app/node_modules/.pnpm/@prisma+client@5.22.0/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
