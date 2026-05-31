@@ -6,11 +6,12 @@ import { menuService } from "@/services/menu.service";
 import { api } from "@/lib/api";
 import { Category } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export function useMenuPage() {
   const { employee } = useAuthStore();
   const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    employee?.restaurantId || RESTAURANT_ID_FALLBACK;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

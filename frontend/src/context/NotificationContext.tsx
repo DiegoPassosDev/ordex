@@ -11,6 +11,7 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { useSocket } from "@/hooks/useSocket";
 import { playBeepSound, initSound } from "@/lib/sound";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -173,7 +174,7 @@ export function NotificationProvider({
   const restId =
     employee?.restaurantId ||
     restaurantId ||
-    "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    RESTAURANT_ID_FALLBACK;
 
   useSocket(employee ? { type: "restaurant", id: restId } : null, {
     new_order: (order: any) => {

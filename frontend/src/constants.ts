@@ -1,0 +1,2 @@
+export const RESTAURANT_ID_FALLBACK =
+  "f4385ae5-6187-40f8-97b4-d289d47dc441";

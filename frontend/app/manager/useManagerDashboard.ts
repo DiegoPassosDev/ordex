@@ -8,6 +8,7 @@ import { ordersService } from "@/services/orders.service";
 import { useSocket } from "@/hooks/useSocket";
 import { useAppModal } from "@/context/AppModalContext";
 import { TableSession, Order, Employee, Guest, Table } from "@/types";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export type DashboardSession = TableSession & {
   guests?: Guest[];
@@ -17,7 +18,7 @@ export function useManagerDashboard() {
   const { employee } = useAuthStore();
   const { showModal } = useAppModal();
   const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    employee?.restaurantId || RESTAURANT_ID_FALLBACK;
 
   const [sessions, setSessions] = useState<DashboardSession[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);

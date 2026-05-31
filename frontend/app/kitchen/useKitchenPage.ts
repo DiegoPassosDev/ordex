@@ -8,8 +8,9 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useAuthStore } from "@/store/auth.store";
 import { Order, EmployeeRole, CategoryType } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
-const RESTAURANT_ID = "f4385ae5-6187-40f8-97b4-d289d47dc441";
+const RESTAURANT_ID = RESTAURANT_ID_FALLBACK;
 
 const ROLE_CATEGORIES: Record<"KITCHEN" | "BAR", CategoryType[]> = {
   KITCHEN: ["FOOD", "DESSERT"],

@@ -9,8 +9,9 @@ import { useSocket } from "@/hooks/useSocket";
 import { useNotifications } from "@/hooks/useNotifications";
 import { TableSession } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
-const RESTAURANT_FALLBACK = "f4385ae5-6187-40f8-97b4-d289d47dc441";
+const RESTAURANT_FALLBACK = RESTAURANT_ID_FALLBACK;
 
 export type Tab = "tables" | "alerts";
 

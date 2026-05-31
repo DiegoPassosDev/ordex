@@ -8,6 +8,7 @@ import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/Toast";
 import { useNotificationContext } from "@/context/NotificationContext";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export const METHOD_LABEL: Record<string, string> = {
   CASH: "Dinheiro", PIX: "Pix", DEBIT: "Débito", CREDIT: "Crédito",
@@ -19,7 +20,7 @@ export function useCashierPage() {
   const { employee, clearAuth } = useAuthStore();
   const { clearAll } = useNotificationContext();
   const router = useRouter();
-  const restaurantId = employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+  const restaurantId = employee?.restaurantId || RESTAURANT_ID_FALLBACK;
 
   const [sessions, setSessions] = useState<any[]>([]);
   const [debts, setDebts] = useState<any[]>([]);

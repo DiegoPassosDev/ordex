@@ -5,11 +5,12 @@ import { useAuthStore } from "@/store/auth.store";
 import { ordersService } from "@/services/orders.service";
 import { Order } from "@/types";
 import { toast } from "@/components/ui/Toast";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export function useReportsPage() {
   const { employee } = useAuthStore();
   const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    employee?.restaurantId || RESTAURANT_ID_FALLBACK;
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);

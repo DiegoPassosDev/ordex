@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 export function useEntriesPage() {
   const { employee } = useAuthStore();
   const restaurantId =
-    employee?.restaurantId || "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    employee?.restaurantId || RESTAURANT_ID_FALLBACK;
 
   const [groups, setGroups] = useState<any[]>([]);
   const [stockItems, setStockItems] = useState<any[]>([]);

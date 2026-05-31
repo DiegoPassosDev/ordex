@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useNotificationContext } from "@/context/NotificationContext";
+import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 
 interface HeaderProps {
@@ -25,7 +26,7 @@ export function Header({
   const restId =
     restaurantId ||
     employee?.restaurantId ||
-    "f4385ae5-6187-40f8-97b4-d289d47dc441";
+    RESTAURANT_ID_FALLBACK;
 
   const {
     notifications,
