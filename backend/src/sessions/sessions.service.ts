@@ -11,7 +11,6 @@ import { OrdersGateway } from '../gateway/orders.gateway';
 import { RequestBillDto } from './dto/request-bill.dto';
 import { RequestTableAccessDto } from './dto/request-table-access.dto';
 
-
 @Injectable()
 export class SessionsService {
   constructor(
@@ -52,7 +51,11 @@ export class SessionsService {
     if (dto.guestName && !guestId) {
       const email = `mesa-${Date.now()}@local`;
       const guest = await this.prisma.guest.create({
-        data: { name: dto.guestName, email, passwordHash: crypto.randomBytes(32).toString('hex') },
+        data: {
+          name: dto.guestName,
+          email,
+          passwordHash: crypto.randomBytes(32).toString('hex'),
+        },
       });
       guestId = guest.id;
     }
@@ -61,7 +64,9 @@ export class SessionsService {
       data: {
         tableId: dto.tableId,
         restaurantId: dto.restaurantId,
-        ...(dto.guestName && dto.waiterId && !guestId && { guestLabel: dto.guestName }),
+        ...(dto.guestName &&
+          dto.waiterId &&
+          !guestId && { guestLabel: dto.guestName }),
         ...(guestId && {
           guests: { connect: { id: guestId } },
           ownerId: guestId, // primeiro guest é o dono
@@ -171,7 +176,9 @@ export class SessionsService {
         serviceChargeType: dto.serviceChargeType,
         serviceChargeAccepted: dto.serviceChargeType !== 'NONE',
         customServiceChargeAmount:
-          dto.serviceChargeType === 'CUSTOM' ? dto.customServiceChargeAmount : null,
+          dto.serviceChargeType === 'CUSTOM'
+            ? dto.customServiceChargeAmount
+            : null,
         splitCount: dto.splitCount || null,
       },
     });
@@ -318,7 +325,9 @@ export class SessionsService {
     } else if (session.waiterId) {
       ownerId = session.waiterId;
     } else {
-      throw new BadRequestException('Nenhum responsável encontrado para esta mesa.');
+      throw new BadRequestException(
+        'Nenhum responsável encontrado para esta mesa.',
+      );
     }
 
     // Verifica se já existe uma solicitação pendente deste guest

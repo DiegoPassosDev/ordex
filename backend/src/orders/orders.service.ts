@@ -153,18 +153,13 @@ export class OrdersService {
   async updateStatus(id: string, dto: UpdateOrderStatusDto) {
     const existing = await this.findOne(id);
 
-    const order = await this.prisma.order.update({
+    await this.prisma.order.update({
       where: { id },
       data: {
         status: dto.status,
         statusHistory: {
           create: { status: dto.status },
         },
-      },
-      include: {
-        items: { include: { menuItem: { include: { category: true } } } },
-        statusHistory: { orderBy: { createdAt: 'asc' } },
-        session: { include: { table: true } },
       },
     });
 
@@ -173,13 +168,21 @@ export class OrdersService {
 
       // Itens que já têm statusChangedAt (já passaram por READY) — mantém o timestamp original
       await this.prisma.orderItem.updateMany({
-        where: { orderId: id, status: { not: OrderStatus.CANCELLED }, statusChangedAt: { not: null } },
+        where: {
+          orderId: id,
+          status: { not: OrderStatus.CANCELLED },
+          statusChangedAt: { not: null },
+        },
         data: { status: OrderStatus.DELIVERED },
       });
 
       // Itens sem statusChangedAt (pularam READY) — marca com timestamp atual
       await this.prisma.orderItem.updateMany({
-        where: { orderId: id, status: { not: OrderStatus.CANCELLED }, statusChangedAt: null },
+        where: {
+          orderId: id,
+          status: { not: OrderStatus.CANCELLED },
+          statusChangedAt: null,
+        },
         data: { status: OrderStatus.DELIVERED, statusChangedAt: new Date() },
       });
     }
@@ -209,13 +212,15 @@ export class OrdersService {
     const order = await this.findOne(orderId);
 
     const orderItem = order.items.find((i) => i.id === itemId);
-    if (!orderItem) throw new NotFoundException('Item do pedido não encontrado.');
+    if (!orderItem)
+      throw new NotFoundException('Item do pedido não encontrado.');
 
     await this.prisma.orderItem.update({
       where: { id: itemId },
       data: {
         status: dto.status,
-        statusChangedAt: dto.status === OrderStatus.READY ? new Date() : undefined,
+        statusChangedAt:
+          dto.status === OrderStatus.READY ? new Date() : undefined,
       },
     });
 
@@ -245,7 +250,7 @@ export class OrdersService {
 
     // Notifica mudança no item individual
     this.gateway.notifyOrderItemStatusUpdate(
-      order.session!.restaurantId,
+      order.session.restaurantId,
       order.sessionId,
       {
         orderId,
@@ -258,7 +263,7 @@ export class OrdersService {
     // Notifica mudança no pedido como um todo (se o status agregado mudou)
     if (aggregateStatus !== order.status) {
       this.gateway.notifyOrderStatusUpdate(
-        order.session!.restaurantId,
+        order.session.restaurantId,
         order.sessionId,
         finalOrder,
       );
@@ -268,12 +273,15 @@ export class OrdersService {
   }
 
   private computeAggregateStatus(statuses: OrderStatus[]): OrderStatus {
-    if (statuses.every((s) => s === OrderStatus.DELIVERED || s === OrderStatus.CANCELLED))
+    if (
+      statuses.every(
+        (s) => s === OrderStatus.DELIVERED || s === OrderStatus.CANCELLED,
+      )
+    )
       return OrderStatus.DELIVERED;
     if (statuses.some((s) => s === OrderStatus.ON_THE_WAY))
       return OrderStatus.ON_THE_WAY;
-    if (statuses.some((s) => s === OrderStatus.READY))
-      return OrderStatus.READY;
+    if (statuses.some((s) => s === OrderStatus.READY)) return OrderStatus.READY;
     if (statuses.some((s) => s === OrderStatus.PREPARING))
       return OrderStatus.PREPARING;
     return OrderStatus.WAITING;

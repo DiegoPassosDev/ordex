@@ -19,9 +19,10 @@ type SocketUser = {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.NODE_ENV === 'production'
-      ? [process.env.FRONTEND_URL].filter(Boolean)
-      : true,
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? [process.env.FRONTEND_URL].filter(Boolean)
+        : true,
     credentials: true,
   },
 })
@@ -90,7 +91,10 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (user.role === 'GUEST') {
       const isMember = session.guests.some((g) => g.id === user.sub);
       if (!isMember) return;
-    } else if (user.restaurantId && user.restaurantId !== session.restaurantId) {
+    } else if (
+      user.restaurantId &&
+      user.restaurantId !== session.restaurantId
+    ) {
       return;
     }
 
@@ -191,7 +195,7 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('session_closed_by_manager', { tableNumber: data.tableNumber });
   }
 
-    // ── Garçons ativos (online) ───────────────────────────────────────────────
+  // ── Garçons ativos (online) ───────────────────────────────────────────────
 
   private static activeWaiters = new Map<string, Map<string, string>>();
   // restaurantId -> Map<userId, socketId>

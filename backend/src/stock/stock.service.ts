@@ -324,7 +324,11 @@ export class StockService {
     return this.prisma.$transaction(async (tx) => {
       await tx.menuItemIngredient.deleteMany({ where: { menuItemId } });
       return tx.menuItemIngredient.createMany({
-        data: ingredients.map((i) => ({ ...i, menuItemId, unit: i.unit as any })),
+        data: ingredients.map((i) => ({
+          ...i,
+          menuItemId,
+          unit: i.unit as any,
+        })),
       });
     });
   }
