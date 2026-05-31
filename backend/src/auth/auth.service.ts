@@ -21,9 +21,10 @@ export class AuthService {
       where: { email: dto.email },
     });
 
-    if (existing) throw new ConflictException('E-mail já cadastrado.');
+    if (existing)
+      throw new ConflictException('Não foi possível completar o cadastro.');
 
-    const hash = await bcrypt.hash(dto.password, 10);
+    const hash = await bcrypt.hash(dto.password, 12);
 
     const guest = await this.prisma.guest.create({
       data: {

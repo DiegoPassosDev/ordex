@@ -3,7 +3,6 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -25,14 +24,15 @@ export class EmployeesService {
     });
     if (existing) throw new ConflictException('E-mail já cadastrado.');
 
-    const hash = await bcrypt.hash(dto.password, 10);
+    const hash = await bcrypt.hash(dto.password, 12);
+    const pinHash = await bcrypt.hash(dto.pin, 12);
 
     return this.prisma.employee.create({
       data: {
         name: dto.name,
         email: dto.email,
         passwordHash: hash,
-        pin: dto.pin,
+        pin: pinHash,
         role: dto.role,
         restaurantId: dto.restaurantId,
       },

@@ -1,3 +1,4 @@
+import ms from 'ms';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -14,7 +15,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: 60 * 60 * 24 * 7 }, // 7 dias em segundos
+        signOptions: {
+          expiresIn: ms(config.get<string>('JWT_EXPIRES_IN') || '7d'),
+        },
       }),
     }),
   ],

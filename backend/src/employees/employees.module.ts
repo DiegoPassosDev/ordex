@@ -1,3 +1,4 @@
+import ms from 'ms';
 import { Module } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 import { EmployeesController } from './employees.controller';
@@ -11,7 +12,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: 60 * 60 * 12 },
+        signOptions: {
+          expiresIn: ms(config.get<string>('JWT_EXPIRES_IN') || '12h'),
+        },
       }),
     }),
   ],
