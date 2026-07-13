@@ -8,14 +8,16 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  app.use(helmet());
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (isProduction) {
+    app.use(helmet());
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
 
-  // CORS configurado para desenvolvimento
-  const isProduction = process.env.NODE_ENV === 'production';
   app.enableCors({
     origin: isProduction ? process.env.FRONTEND_URL : true,
     credentials: true,

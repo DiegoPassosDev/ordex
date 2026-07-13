@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { CustomToaster } from "@/components/ui/Toast";
 import { Header } from "@/components/layout/Header";
+import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
 import { useSettingsPage } from "./useSettingsPage";
 
 const navItems = [
@@ -37,6 +39,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { employee, clearAuth } = useAuthStore();
   const { form, setForm, loading, saving, restaurantId, handleSave } = useSettingsPage();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -213,10 +216,7 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <button
-                    onClick={() => {
-                      clearAuth();
-                      router.push("/login");
-                    }}
+                    onClick={() => setShowLogoutModal(true)}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium shrink-0"
                   >
                     <LogOut className="w-4 h-4" />
@@ -228,6 +228,14 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={() => {
+          clearAuth();
+          router.push("/login");
+        }}
+      />
     </div>
   );
 }

@@ -18,8 +18,7 @@ export function useSocket(
   useEffect(() => {
     if (!room?.id || !token) return;
 
-    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost";
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `http://${hostname}:3001`;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "/";
 
     const socket = io(wsUrl, {
       transports: ["websocket"],

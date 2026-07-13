@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ItemTimer } from "@/components/ui/ItemTimer";
 import { ExpandableText } from "@/components/ui/ExpandableText";
-import { ChefHat, CheckCheck, Flame, Loader2 } from "lucide-react";
+import { ChefHat, CheckCheck, Flame, Loader2, LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { CustomToaster } from "@/components/ui/Toast";
+import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
 import { useKitchenPage } from "./useKitchenPage";
 
 export default function KitchenPage() {
   const p = useKitchenPage();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   if (!p.mounted) return null;
 
@@ -85,6 +88,13 @@ export default function KitchenPage() {
             </span>
           </div>
           <ThemeToggle />
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
+            title="Sair"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -199,6 +209,11 @@ export default function KitchenPage() {
           </div>
         ))}
       </div>
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={p.handleLogout}
+      />
     </div>
   );
 }

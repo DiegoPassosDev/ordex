@@ -1,11 +1,13 @@
 "use client";
 
+import React from "react";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
 import { useWaiterPage } from "./useWaiterPage";
 import { WaiterSessionDetail } from "./WaiterSessionDetail";
 import { WaiterOpenTableModal } from "./modal/WaiterOpenTableModal";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
 import {
   UtensilsCrossed,
   Bell,
@@ -90,6 +92,7 @@ function AccessRequestContent({ p }: { p: ReturnType<typeof useWaiterPage> }) {
 
 function ProfileContent({ p }: { p: ReturnType<typeof useWaiterPage> }) {
   const { close } = useSlideUpClose();
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   return (
     <div className="p-6">
@@ -124,12 +127,17 @@ function ProfileContent({ p }: { p: ReturnType<typeof useWaiterPage> }) {
         <ThemeToggle />
       </div>
       <button
-        onClick={p.handleLogout}
+        onClick={() => setShowLogoutModal(true)}
         className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-all"
       >
         <LogOut className="w-4 h-4" />
         Sair da conta
       </button>
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={p.handleLogout}
+      />
     </div>
   );
 }

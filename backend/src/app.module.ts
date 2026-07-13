@@ -20,7 +20,10 @@ import { PaymentsModule } from './payments/payments.module';
 @Module({
   imports: [
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 30 }]),
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
+    }),
     PrismaModule,
     AuthModule,
     RestaurantModule,

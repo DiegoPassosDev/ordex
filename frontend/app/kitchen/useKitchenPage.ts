@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ordersService } from "@/services/orders.service";
 import { useSocket } from "@/hooks/useSocket";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -31,10 +32,12 @@ function filterOrderByRole(order: Order, role: EmployeeRole | undefined): Order 
 export function useKitchenPage() {
   useRequireAuth(["KITCHEN", "BAR"]);
   const employee = useAuthStore((s) => s.employee);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { addNotification } = useNotifications();
+  const { addNotification, clearAll } = useNotifications();
 
   useEffect(() => {
     setMounted(true);
@@ -169,6 +172,12 @@ export function useKitchenPage() {
   const preparing = orders.map((o) => filterItemsByStatus(o, "PREPARING")).filter(Boolean) as Order[];
   const ready = orders.map((o) => filterItemsByStatus(o, "READY")).filter(Boolean) as Order[];
 
+  function handleLogout() {
+    clearAll();
+    clearAuth();
+    router.push("/login");
+  }
+
   return {
     employee,
     orders,
@@ -179,5 +188,6 @@ export function useKitchenPage() {
     ready,
     updateItemStatus,
     loadOrders,
+    handleLogout,
   };
 }

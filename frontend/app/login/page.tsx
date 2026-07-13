@@ -166,7 +166,16 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="text-center text-xs text-gray-500 mt-8">
+          <div className="mt-6 pt-6 border-t border-gray-700 text-center">
+            <a
+              href="/login/customer"
+              className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+            >
+              Sou Cliente — acessar mesa
+            </a>
+          </div>
+
+          <p className="text-center text-xs text-gray-500 mt-6">
             Suporte: {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "fluixit@gmail.com"}
           </p>
         </div>

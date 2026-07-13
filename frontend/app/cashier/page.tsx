@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   DollarSign,
   CreditCard,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { CustomToaster } from "@/components/ui/Toast";
+import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
 import { useCashierPage, METHOD_LABEL } from "./useCashierPage";
 
 const PAYMENT_METHODS = [
@@ -74,6 +76,7 @@ const PAYMENT_METHODS = [
 
 export default function CashierPage() {
   const p = useCashierPage();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
@@ -106,7 +109,7 @@ export default function CashierPage() {
             )}
             <ThemeToggle className="flex w-8 h-8 items-center justify-center rounded-lg border border-gray-600 bg-gray-700/50 text-gray-400 hover:text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/30 transition-all" />
             <button
-              onClick={p.handleLogout}
+              onClick={() => setShowLogoutModal(true)}
               className="w-8 h-8 rounded-lg bg-gray-700/50 border border-gray-600 flex items-center justify-center text-gray-400 hover:text-red-400 transition-all"
             >
               <LogOut className="w-4 h-4" />
@@ -762,6 +765,11 @@ export default function CashierPage() {
           </div>
         )}
       </div>
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={p.handleLogout}
+      />
     </div>
   );
 }

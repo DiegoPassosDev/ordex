@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { LogOut } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
 import { useNotificationContext } from "@/context/NotificationContext";
 import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
@@ -23,6 +25,7 @@ export function Header({
 }: HeaderProps) {
   const { guest, employee, clearAuth } = useAuthStore();
   const router = useRouter();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const restId =
     restaurantId ||
     employee?.restaurantId ||
@@ -81,13 +84,19 @@ export function Header({
         </div>
 
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutModal(true)}
           className="w-10 h-10 rounded-xl bg-gray-800 border border-gray-600 shadow-sm flex items-center justify-center text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-all"
           title="Sair"
         >
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onCancel={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+      />
     </header>
   );
 }
