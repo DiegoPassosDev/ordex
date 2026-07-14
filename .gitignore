@@ -32,3 +32,8 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Manual / scripts
+Manual_Ordex.pdf
+manual-ordex.html
+generate-pdf.js
