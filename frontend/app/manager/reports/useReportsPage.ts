@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { ordersService } from "@/services/orders.service";
 import { Order } from "@/types";
@@ -15,11 +15,7 @@ export function useReportsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const data = await ordersService.getByRestaurant(restaurantId);
@@ -29,7 +25,11 @@ export function useReportsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const delivered = orders.filter((o) => o.status === "DELIVERED");
   const cancelled = orders.filter((o) => o.status === "CANCELLED");

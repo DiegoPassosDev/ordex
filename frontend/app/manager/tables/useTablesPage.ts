@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { sessionsService } from "@/services/sessions.service";
 import { api } from "@/lib/api";
@@ -38,21 +38,7 @@ export function useTablesPage() {
   const [qrCodeImage, setQrCodeImage] = useState<string>("");
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useSocket(
-    { type: "restaurant", id: restaurantId },
-    {
-      table_session_updated: () => loadData(false),
-      new_order: () => loadData(false),
-      order_status_updated: () => loadData(false),
-      bill_requested: () => loadData(false),
-    },
-  );
-
-  async function loadData(showSpinner = true) {
+  const loadData = useCallback(async (showSpinner = true) => {
     try {
       if (showSpinner) setLoading(true);
       const [tablesData, sessionsData] = await Promise.all([
@@ -66,7 +52,21 @@ export function useTablesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useSocket(
+    { type: "restaurant", id: restaurantId },
+    {
+      table_session_updated: () => loadData(false),
+      new_order: () => loadData(false),
+      order_status_updated: () => loadData(false),
+      bill_requested: () => loadData(false),
+    },
+  );
 
   async function handleAddTable() {
     if (!newTableNumber || isNaN(Number(newTableNumber))) {

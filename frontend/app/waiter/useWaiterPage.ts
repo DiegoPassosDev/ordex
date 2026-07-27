@@ -65,10 +65,31 @@ export function useWaiterPage() {
     typeConfig,
   } = useNotifications();
 
+  const loadSessions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await sessionsService.getActiveByRestaurant(restaurantId);
+      setSessions(data);
+    } catch {
+      toast.error("Erro ao carregar mesas.");
+    } finally {
+      setLoading(false);
+    }
+  }, [restaurantId]);
+
+  const refreshSessionsSilent = useCallback(async () => {
+    try {
+      const data = await sessionsService.getActiveByRestaurant(restaurantId);
+      setSessions(data);
+    } catch {
+      // silent — não mostra erro nem loading para não atrapalhar UX
+    }
+  }, [restaurantId]);
+
   useEffect(() => {
     setMounted(true);
     loadSessions();
-  }, []);
+  }, [loadSessions]);
 
   useEffect(() => {
     if (!selectedSession) return;
@@ -79,7 +100,7 @@ export function useWaiterPage() {
       // Se a sessão sumiu da lista e não foi fechada, pode ter sido arquivada
       setSelectedSession(null);
     }
-  }, [sessions]);
+  }, [sessions, selectedSession]);
 
   // Limpa timeout de redirecionamento ao desmontar
   useEffect(() => {
@@ -190,27 +211,6 @@ export function useWaiterPage() {
     },
   );
 
-  const loadSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await sessionsService.getActiveByRestaurant(restaurantId);
-      setSessions(data);
-    } catch {
-      toast.error("Erro ao carregar mesas.");
-    } finally {
-      setLoading(false);
-    }
-  }, [restaurantId]);
-
-  async function refreshSessionsSilent() {
-    try {
-      const data = await sessionsService.getActiveByRestaurant(restaurantId);
-      setSessions(data);
-    } catch {
-      // silent — não mostra erro nem loading para não atrapalhar UX
-    }
-  }
-
   // ── Fallback ao voltar do standby / polling periódico ─────────────────
   useEffect(() => {
     function handleVisibilityChange() {
@@ -227,7 +227,7 @@ export function useWaiterPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [restaurantId]);
+  }, [restaurantId, refreshSessionsSilent]);
 
   async function handleAcceptTable(sessionId: string) {
     if (!employee) return;

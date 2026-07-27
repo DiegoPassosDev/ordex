@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -31,11 +31,7 @@ export function useEntriesPage() {
     { stockItemId: "", quantity: "", costPerUnit: "" },
   ]);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     try {
       setLoading(true);
       const [entriesRes, itemsRes, suppliersRes] = await Promise.all([
@@ -51,7 +47,11 @@ export function useEntriesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   function openModal() {
     setForm({ supplierId: "", note: "" });

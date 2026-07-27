@@ -30,6 +30,23 @@ const UNIT_LABEL: Record<string, string> = {
 
 type SortKey = "name" | "quantity" | "costPerUnit" | "totalValue";
 
+function SortIcon({
+  col,
+  sortKey,
+  sortAsc,
+}: {
+  col: SortKey;
+  sortKey: SortKey | null;
+  sortAsc: boolean;
+}) {
+  if (sortKey !== col) return null;
+  return sortAsc ? (
+    <ChevronUp className="w-3 h-3 inline ml-0.5" />
+  ) : (
+    <ChevronDown className="w-3 h-3 inline ml-0.5" />
+  );
+}
+
 export default function InventoryPage() {
   const {
     report,
@@ -45,15 +62,6 @@ export default function InventoryPage() {
     toggleSort,
     restaurantId,
   } = useInventoryPage();
-
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return null;
-    return sortAsc ? (
-      <ChevronUp className="w-3 h-3 inline ml-0.5" />
-    ) : (
-      <ChevronDown className="w-3 h-3 inline ml-0.5" />
-    );
-  };
 
   const thClass =
     "text-xs text-gray-500 font-medium cursor-pointer hover:text-gray-300 transition-colors select-none";
@@ -233,13 +241,13 @@ export default function InventoryPage() {
                       className={`${thClass} col-span-4 text-left`}
                       onClick={() => toggleSort("name")}
                     >
-                      Insumo <SortIcon col="name" />
+                      Insumo <SortIcon col="name" sortKey={sortKey} sortAsc={sortAsc} />
                     </button>
                     <button
                       className={`${thClass} col-span-2 text-right`}
                       onClick={() => toggleSort("quantity")}
                     >
-                      Qtd. atual <SortIcon col="quantity" />
+                      Qtd. atual <SortIcon col="quantity" sortKey={sortKey} sortAsc={sortAsc} />
                     </button>
                     <p className="col-span-1 text-xs text-gray-500 font-medium text-center">
                       Mín.
@@ -248,13 +256,13 @@ export default function InventoryPage() {
                       className={`${thClass} col-span-2 text-right`}
                       onClick={() => toggleSort("costPerUnit")}
                     >
-                      Custo/un <SortIcon col="costPerUnit" />
+                      Custo/un <SortIcon col="costPerUnit" sortKey={sortKey} sortAsc={sortAsc} />
                     </button>
                     <button
                       className={`${thClass} col-span-2 text-right`}
                       onClick={() => toggleSort("totalValue")}
                     >
-                      Valor total <SortIcon col="totalValue" />
+                      Valor total <SortIcon col="totalValue" sortKey={sortKey} sortAsc={sortAsc} />
                     </button>
                     <p className="col-span-1 text-xs text-gray-500 font-medium text-center">
                       Status

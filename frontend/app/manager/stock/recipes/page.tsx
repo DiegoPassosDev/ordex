@@ -18,13 +18,6 @@ import { Header } from "@/components/layout/Header";
 import { useRecipesPage } from "./useRecipesPage";
 
 const UNITS = ["G", "KG", "ML", "L", "UN"];
-const UNIT_LABEL: Record<string, string> = {
-  KG: "kg",
-  G: "g",
-  L: "l",
-  ML: "ml",
-  UN: "un",
-};
 
 export default function RecipesPage() {
   const {

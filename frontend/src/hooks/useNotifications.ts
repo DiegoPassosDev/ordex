@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuthStore } from "@/store/auth.store";
 import { playNotificationSound as playSound, initSound } from "@/lib/sound";
 
 export type NotificationType =
@@ -40,7 +39,6 @@ function playNotificationSound() {
 }
 
 export function useNotifications() {
-  const { employee } = useAuthStore();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;

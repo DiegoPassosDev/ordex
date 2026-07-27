@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
@@ -39,10 +39,28 @@ export function useCashierPage() {
   const [notes, setNotes] = useState("");
   const [authPin, setAuthPin] = useState("");
 
+  const loadAll = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [sessionsRes, debtsRes, reportRes] = await Promise.all([
+        api.get(`/payments/restaurant/${restaurantId}/pending`),
+        api.get(`/payments/restaurant/${restaurantId}/debts`),
+        api.get(`/payments/restaurant/${restaurantId}/report`),
+      ]);
+      setSessions(sessionsRes.data);
+      setDebts(debtsRes.data);
+      setReport(reportRes.data);
+    } catch {
+      toast.error("Erro ao carregar dados.");
+    } finally {
+      setLoading(false);
+    }
+  }, [restaurantId]);
+
   useEffect(() => {
     if (!restaurantId) return;
     loadAll();
-  }, [restaurantId]);
+  }, [restaurantId, loadAll]);
 
   useSocket(
     { type: "restaurant", id: restaurantId },
@@ -62,24 +80,6 @@ export function useCashierPage() {
       },
     },
   );
-
-  async function loadAll() {
-    try {
-      setLoading(true);
-      const [sessionsRes, debtsRes, reportRes] = await Promise.all([
-        api.get(`/payments/restaurant/${restaurantId}/pending`),
-        api.get(`/payments/restaurant/${restaurantId}/debts`),
-        api.get(`/payments/restaurant/${restaurantId}/report`),
-      ]);
-      setSessions(sessionsRes.data);
-      setDebts(debtsRes.data);
-      setReport(reportRes.data);
-    } catch {
-      toast.error("Erro ao carregar dados.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleSelectSession(session: any) {
     setSelectedSession(session);

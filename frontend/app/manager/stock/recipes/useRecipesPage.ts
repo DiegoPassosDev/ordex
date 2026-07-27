@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -18,11 +18,7 @@ export function useRecipesPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     try {
       setLoading(true);
       const [menuRes, stockRes] = await Promise.all([
@@ -36,7 +32,11 @@ export function useRecipesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   async function selectMenuItem(item: any) {
     setSelectedMenu(item);

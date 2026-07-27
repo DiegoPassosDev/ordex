@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -14,12 +14,12 @@ export function useRequireAuth(role: RequiredRole | RequiredRole[]) {
   const { token, employee } = useAuthStore();
   const router = useRouter();
 
-  // Normaliza sempre para array
-  const allowedRoles = (Array.isArray(role) ? role : [role]).map(
-    (r) => r.toUpperCase() as RequiredRole,
+  const allowedRoles = useMemo(
+    () => (Array.isArray(role) ? role : [role]).map((r) => r.toUpperCase() as RequiredRole),
+    [role],
   );
 
-  const isGuestRoute = allowedRoles.includes("GUEST");
+  const isGuestRoute = useMemo(() => allowedRoles.includes("GUEST"), [allowedRoles]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,5 +52,5 @@ export function useRequireAuth(role: RequiredRole | RequiredRole[]) {
       router.replace("/login");
       return;
     }
-  }, [token, employee]);
+  }, [token, employee, allowedRoles, isGuestRoute, router]);
 }

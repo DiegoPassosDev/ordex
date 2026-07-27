@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { managerNavItems } from "@/lib/stock-nav";
 import {
-  Plus,
   X,
   Loader2,
   ArrowLeft,
@@ -13,7 +12,7 @@ import {
   Mail,
 } from "lucide-react";
 import Link from "next/link";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import { Header } from "@/components/layout/Header";
 import { useSuppliersPage } from "./useSuppliersPage";
 
@@ -28,7 +27,6 @@ export default function SuppliersPage() {
     form,
     setForm,
     restaurantId,
-    openCreate,
     openEdit,
     handleSave,
     handleDelete,

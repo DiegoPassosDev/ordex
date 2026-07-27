@@ -104,13 +104,31 @@ export function useTablePage() {
   // ── Sessão encerrada pelo gestor ──────────────────────────────────────────
   const [sessionClosedByManager, setSessionClosedByManager] = useState(false);
 
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      if (sessionId && guest?.id) {
+        const session = await sessionsService.getOne(sessionId);
+        if (session.status !== "CLOSED") {
+          await sessionsService.leaveSession(sessionId, guest.id);
+        }
+      }
+    } catch {
+    } finally {
+      setLoggingOut(false);
+    }
+    router.push("/login/customer");
+    logout();
+  }, [loggingOut, sessionId, guest?.id, router, logout]);
+
   useEffect(() => {
     if (!sessionClosedByManager) return;
     const timer = setTimeout(() => {
       handleLogout();
     }, 5000);
     return () => clearTimeout(timer);
-  }, [sessionClosedByManager]);
+  }, [sessionClosedByManager, handleLogout]);
 
   // ── Bill / conta ──────────────────────────────────────────────────────────
   const [showBillModal, setShowBillModal] = useState(false);
@@ -309,7 +327,7 @@ export function useTablePage() {
       setTableId("");
       return;
     }
-  }, [hasHydrated, guest?.id, setTableId]);
+  }, [hasHydrated, guest?.id, setTableId, loadMenu, loadOrders, router]);
 
   // ── Polling ao voltar do standby — recarrega dados perdidos pelo WebSocket ──
   useEffect(() => {
@@ -374,7 +392,7 @@ export function useTablePage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [sessionId, guest?.id, waitingForAccess, accessDenied, incomingRequest?.requestId, pendingSessionId, loadOrders]);
+  }, [sessionId, guest?.id, waitingForAccess, accessDenied, incomingRequest?.requestId, pendingSessionId, loadOrders, notifyAccessRequest]);
 
   // ── WebSocket — atualizações em tempo real ────────────────────────────────
   useSocket(
@@ -542,24 +560,6 @@ export function useTablePage() {
     } catch {
       toast.error("Erro ao chamar o garçom.");
     }
-  }
-
-  async function handleLogout() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    try {
-      if (sessionId && guest?.id) {
-        const session = await sessionsService.getOne(sessionId);
-        if (session.status !== "CLOSED") {
-          await sessionsService.leaveSession(sessionId, guest.id);
-        }
-      }
-    } catch {
-    } finally {
-      setLoggingOut(false);
-    }
-    router.push("/login/customer");
-    logout();
   }
 
   function handleToggleNotifications() {

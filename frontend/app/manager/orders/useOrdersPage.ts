@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { ordersService } from "@/services/orders.service";
 import { Order, OrderStatus } from "@/types";
@@ -16,11 +16,7 @@ export function useOrdersPage() {
   const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  async function loadOrders() {
+  const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       const data = await ordersService.getByRestaurant(restaurantId);
@@ -30,7 +26,11 @@ export function useOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
 
   async function handleCancel(orderId: string) {
     if (!confirm("Deseja cancelar este pedido?")) return;

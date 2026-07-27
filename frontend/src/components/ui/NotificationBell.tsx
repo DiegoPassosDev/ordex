@@ -38,7 +38,12 @@ export function NotificationBell({
   className = "",
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -66,7 +71,7 @@ export function NotificationBell({
         className={`relative w-10 h-10 rounded-xl bg-gray-800 border border-gray-600 shadow-sm flex items-center justify-center text-gray-400 hover:bg-gray-700 hover:text-white transition-all ${className}`}
       >
         <Bell className="w-4 h-4" />
-        {unreadCount > 0 && (
+        {mounted && unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold leading-none">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -26,11 +26,7 @@ export function usePurchasesPage() {
     { stockItemId: "", quantity: "", costPerUnit: "" },
   ]);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     try {
       setLoading(true);
       const [ordersRes, suppliersRes, stockRes] = await Promise.all([
@@ -46,7 +42,11 @@ export function usePurchasesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   function addItem() {
     setOrderItems([

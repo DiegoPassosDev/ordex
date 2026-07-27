@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -20,11 +20,7 @@ export function useInventoryPage() {
   const [sortAsc, setSortAsc] = useState(true);
   const [filterLow, setFilterLow] = useState(false);
 
-  useEffect(() => {
-    loadReport();
-  }, []);
-
-  async function loadReport() {
+  const loadReport = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get(`/stock/report/stock/${restaurantId}`);
@@ -34,7 +30,11 @@ export function useInventoryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {

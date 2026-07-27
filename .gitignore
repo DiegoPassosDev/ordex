@@ -14,9 +14,6 @@ build/
 .env.production
 .env.development
 
-# Prisma
-backend/prisma/migrations/*.sql
-
 # Logs
 *.log
 npm-debug.log*
@@ -37,3 +34,14 @@ Thumbs.db
 Manual_Ordex.pdf
 manual-ordex.html
 generate-pdf.js
+
+# Local reference docs
+TESTING_PLAN.md
+
+# Local helper scripts
+backend/checkdb.js
+frontend/print-simulator.js
+
+# Playwright (when implemented)
+test-results/
+playwright-report/

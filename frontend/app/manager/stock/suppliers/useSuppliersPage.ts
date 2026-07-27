@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/api";
 import { toast } from "@/components/ui/Toast";
@@ -24,11 +24,7 @@ export function useSuppliersPage() {
     notes: "",
   });
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  async function loadSuppliers() {
+  const loadSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get(`/suppliers/restaurant/${restaurantId}`);
@@ -38,7 +34,11 @@ export function useSuppliersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   function openCreate() {
     setEditItem(null);

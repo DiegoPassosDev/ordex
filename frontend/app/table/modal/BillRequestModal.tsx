@@ -27,7 +27,7 @@ export function BillRequestModal({
   serviceCharge,
   paymentMethod,
   setPaymentMethod,
-  acceptService,
+  acceptService: _acceptService,
   setAcceptService,
   serviceChargeType,
   setServiceChargeType,

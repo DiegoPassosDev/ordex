@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useId } from "react";
+import { useState, useEffect, useId, useCallback } from "react";
 import {
   X,
   Camera,
@@ -38,7 +38,7 @@ type Step = "choose" | "select" | "scan" | "name";
 
 function Inner({
   restaurantId,
-  waiterId,
+  waiterId: _waiterId,
   onOpen,
 }: WaiterOpenTableModalProps) {
   const { close } = useSlideUpClose();
@@ -49,13 +49,7 @@ function Inner({
   const [tables, setTables] = useState<Table[]>([]);
   const [loadingTables, setLoadingTables] = useState(false);
 
-  useEffect(() => {
-    if (step === "choose") {
-      loadAvailableTables();
-    }
-  }, [step]);
-
-  async function loadAvailableTables() {
+  const loadAvailableTables = useCallback(async () => {
     setLoadingTables(true);
     try {
       const data = await sessionsService.getTablesByRestaurant(
@@ -68,7 +62,13 @@ function Inner({
     } finally {
       setLoadingTables(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    if (step === "choose") {
+      loadAvailableTables();
+    }
+  }, [step, loadAvailableTables]);
 
   function handleSelectTable(table: Table) {
     setScannedTableId(table.id);
@@ -348,7 +348,7 @@ function QrScanner({ onScan }: { onScan: (tableId: string) => void }) {
         clearContainer();
       }
     };
-  }, [containerId]);
+  }, [containerId, onScan]);
 
   if (error) {
     return (

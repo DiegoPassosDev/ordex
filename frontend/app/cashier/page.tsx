@@ -9,7 +9,6 @@ import {
   AlertCircle,
   CheckCheck,
   Loader2,
-  ChevronRight,
   X,
   Bell,
   LogOut,
@@ -187,7 +186,6 @@ export default function CashierPage() {
                   </p>
                   {p.billSessions.map((session: any) => {
                     const total = p.getSessionTotal(session);
-                    const items = p.getSessionItemCount(session);
                     const selected = p.selectedSession?.id === session.id;
                     return (
                       <div
@@ -239,7 +237,6 @@ export default function CashierPage() {
                   </p>
                   {p.openSessions.map((session: any) => {
                     const total = p.getSessionTotal(session);
-                    const items = p.getSessionItemCount(session);
                     const selected = p.selectedSession?.id === session.id;
                     return (
                       <div

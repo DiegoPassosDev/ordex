@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import { menuService } from "@/services/menu.service";
 import { api } from "@/lib/api";
@@ -38,11 +38,7 @@ export function useMenuPage() {
     type: "FOOD",
   });
 
-  useEffect(() => {
-    loadMenu();
-  }, []);
-
-  async function loadMenu() {
+  const loadMenu = useCallback(async () => {
     try {
       setLoading(true);
       const data = await menuService.getCategoriesByRestaurant(restaurantId);
@@ -52,7 +48,11 @@ export function useMenuPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
 
   async function handleAddItem() {
     if (!itemForm.name || !itemForm.price || !itemForm.categoryId) {
