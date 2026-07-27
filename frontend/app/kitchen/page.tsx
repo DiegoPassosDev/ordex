@@ -60,11 +60,11 @@ export default function KitchenPage() {
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
-            <Image src="/icone-ordex.svg" alt="Ordex" width={36} height={36} className="w-9 h-9 md:w-10 md:h-10 brightness-0 invert" />
+            <Image src="/icone-ordex.svg" alt="OSdex" width={36} height={36} className="w-9 h-9 md:w-10 md:h-10 brightness-0 invert" />
           </div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-white">
-              {p.employee?.role === "BAR" ? "Bar" : "Cozinha"} — Ordex
+              {p.employee?.role === "BAR" ? "Bar" : "Cozinha"} — OSdex
             </h1>
             <p className="text-gray-400 text-xs md:text-sm">
               Painel de pedidos em tempo real

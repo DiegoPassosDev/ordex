@@ -350,7 +350,7 @@ export default function TablesPage() {
 
                   const logoEl = doc.createElement("div");
                   logoEl.className = "logo";
-                  logoEl.textContent = "Ordex";
+                  logoEl.textContent = "OSdex";
                   container.appendChild(logoEl);
 
                   const nameEl = doc.createElement("div");

@@ -9,7 +9,7 @@ async function main() {
     update: {},
     create: {
       id: "default-restaurant",
-      name: "Ordex Restaurante",
+      name: "OSdex Restaurante",
     },
   });
 
