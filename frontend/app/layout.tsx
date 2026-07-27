@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Ordex — Sistema de Gestão para Restaurantes",
   description: "Gerencie pedidos, mesas e equipes em tempo real",
+  icons: {
+    icon: "/icone-ordex.svg",
+  },
 };
 
 export const viewport: Viewport = {
