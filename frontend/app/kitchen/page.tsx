@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { ItemTimer } from "@/components/ui/ItemTimer";
 import { ExpandableText } from "@/components/ui/ExpandableText";
-import { ChefHat, CheckCheck, Flame, Loader2, LogOut } from "lucide-react";
+import { CheckCheck, Flame, Loader2, LogOut } from "lucide-react";
+import Image from "next/image";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { CustomToaster } from "@/components/ui/Toast";
 import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
@@ -60,7 +60,7 @@ export default function KitchenPage() {
       <div className="flex items-center justify-between mb-6 md:mb-8">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-500 flex items-center justify-center shrink-0">
-            <ChefHat className="w-4 h-4 md:w-5 md:h-5 text-white" />
+            <Image src="/icone-ordex.svg" alt="Ordex" width={36} height={36} className="w-9 h-9 md:w-10 md:h-10 brightness-0 invert" />
           </div>
           <div>
             <h1 className="text-base md:text-xl font-bold text-white">
@@ -158,17 +158,10 @@ export default function KitchenPage() {
                             <div className="flex-1 min-w-0">
                               <p className="text-gray-100 text-sm font-medium leading-tight">
                                 <ExpandableText text={item.menuItem?.name ?? "?"} maxLen={35} />
+                                {item.notes && (
+                                  <span className="text-orange-300/80 text-xs"> ⚠️ {item.notes}</span>
+                                )}
                               </p>
-                              {item.menuItem?.description && (
-                                <p className="text-gray-500 text-xs mt-0.5 leading-tight">
-                                  <ExpandableText text={item.menuItem.description} maxLen={40} />
-                                </p>
-                              )}
-                              {item.notes && (
-                                <p className="text-orange-300/80 text-xs mt-0.5 leading-tight">
-                                  ⚠️ {item.notes}
-                                </p>
-                              )}
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                               <ItemTimer

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ordersService } from "@/services/orders.service";
 import { useSocket } from "@/hooks/useSocket";
@@ -43,13 +43,46 @@ export function useKitchenPage() {
     setMounted(true);
   }, []);
 
+  const restId = employee?.restaurantId || RESTAURANT_ID;
+
+  const loadOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await ordersService.getByRestaurant(restId);
+      const active = data
+        .filter(
+          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
+        )
+        .map((o: Order) => filterOrderByRole(o, employee?.role))
+        .filter(Boolean);
+      setOrders(active as Order[]);
+    } catch {
+      toast.error("Erro ao carregar pedidos.");
+    } finally {
+      setLoading(false);
+    }
+  }, [restId, employee?.role]);
+
+  const refreshOrdersSilent = useCallback(async () => {
+    try {
+      const data = await ordersService.getByRestaurant(restId);
+      const active = data
+        .filter(
+          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
+        )
+        .map((o: Order) => filterOrderByRole(o, employee?.role))
+        .filter(Boolean);
+      setOrders(active as Order[]);
+    } catch {
+      // silent
+    }
+  }, [restId, employee?.role]);
+
   useEffect(() => {
     if (employee?.role) {
       loadOrders();
     }
-  }, [employee?.role]);
-
-  const restId = employee?.restaurantId || RESTAURANT_ID;
+  }, [employee?.role, loadOrders]);
 
   useSocket(
     { type: "restaurant", id: restId },
@@ -71,12 +104,21 @@ export function useKitchenPage() {
         toast.success(`Novo pedido — Mesa ${order.session?.table?.number}!`);
       },
       order_status_updated: (order: Order) => {
+        if (order.status === "DELIVERED" || order.status === "CANCELLED") {
+          setOrders((prev) => prev.filter((o) => o.id !== order.id));
+          return;
+        }
         const filtered = filterOrderByRole(order, employee?.role);
         if (!filtered) {
           setOrders((prev) => prev.filter((o) => o.id !== order.id));
           return;
         }
         setOrders((prev) => prev.map((o) => (o.id === filtered.id ? filtered : o)));
+      },
+      table_session_updated: (data: any) => {
+        if (data?.status === "CLOSED" && data?.id) {
+          setOrders((prev) => prev.filter((o) => o.sessionId !== data.id));
+        }
       },
       order_item_status_updated: (payload: { orderId: string; itemId: string; status: string; order: Order }) => {
         setOrders((prev) =>
@@ -94,39 +136,6 @@ export function useKitchenPage() {
     },
   );
 
-  async function loadOrders() {
-    try {
-      setLoading(true);
-      const data = await ordersService.getByRestaurant(restId);
-      const active = data
-        .filter(
-          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
-        )
-        .map((o: Order) => filterOrderByRole(o, employee?.role))
-        .filter(Boolean);
-      setOrders(active as Order[]);
-    } catch {
-      toast.error("Erro ao carregar pedidos.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function refreshOrdersSilent() {
-    try {
-      const data = await ordersService.getByRestaurant(restId);
-      const active = data
-        .filter(
-          (o: Order) => o.status !== "DELIVERED" && o.status !== "CANCELLED",
-        )
-        .map((o: Order) => filterOrderByRole(o, employee?.role))
-        .filter(Boolean);
-      setOrders(active as Order[]);
-    } catch {
-      // silent
-    }
-  }
-
   // ── Fallback ao voltar do standby / polling periódico ─────────────────
   useEffect(() => {
     function handleVisibilityChange() {
@@ -143,7 +152,7 @@ export function useKitchenPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       clearInterval(interval);
     };
-  }, [restId, employee?.role]);
+  }, [restId, employee?.role, refreshOrdersSilent]);
 
   async function updateItemStatus(orderId: string, itemId: string, status: string) {
     try {
