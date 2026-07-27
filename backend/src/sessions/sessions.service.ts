@@ -10,12 +10,14 @@ import { AssignWaiterDto } from './dto/assign-waiter.dto';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import { RequestBillDto } from './dto/request-bill.dto';
 import { RequestTableAccessDto } from './dto/request-table-access.dto';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class SessionsService {
   constructor(
     private prisma: PrismaService,
     private gateway: OrdersGateway,
+    private ordersService: OrdersService,
   ) {}
 
   async open(dto: OpenSessionDto) {
@@ -207,6 +209,9 @@ export class SessionsService {
 
   async close(id: string, closedByRole?: string) {
     const session = await this.findOne(id);
+
+    // Marca todos os pedidos pendentes como DELIVERED
+    await this.ordersService.deliverPendingOrders(id, session.restaurantId);
 
     const updated = await this.prisma.tableSession.update({
       where: { id },

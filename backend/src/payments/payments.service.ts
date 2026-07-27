@@ -2,16 +2,23 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod, Prisma } from '@prisma/client';
 import { OrdersGateway } from '../gateway/orders.gateway';
+import { PrintersService } from '../printers/printers.service';
+import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private prisma: PrismaService,
     private gateway: OrdersGateway,
+    private printersService: PrintersService,
+    private ordersService: OrdersService,
   ) {}
 
   async createPayment(data: {
@@ -30,7 +37,7 @@ export class PaymentsService {
       include: {
         orders: {
           where: { status: { not: 'CANCELLED' } },
-          include: { items: true },
+          include: { items: { include: { menuItem: true } } },
         },
         bill: true,
         guests: true,
@@ -48,11 +55,8 @@ export class PaymentsService {
       0,
     );
 
-    const restaurant = await this.prisma.restaurant.findUnique({
-      where: { id: data.restaurantId },
-    });
-
-    const serviceCharge = subtotal * ((restaurant?.serviceCharge ?? 10) / 100);
+    const bill = session.bill;
+    const serviceCharge = bill?.serviceCharge ?? 0;
     const discount = data.discount ?? 0;
     const finalAmount = subtotal + serviceCharge - discount;
     const change =
@@ -142,6 +146,9 @@ export class PaymentsService {
       include: { table: true },
     });
 
+    // Marca todos os pedidos pendentes como DELIVERED
+    await this.ordersService.deliverPendingOrders(data.sessionId, data.restaurantId);
+
     this.gateway.notifyTableSessionUpdate(session.restaurantId, {
       ...closedSession,
       closeReason: 'PAYMENT_CLOSED',
@@ -170,7 +177,81 @@ export class PaymentsService {
       },
     });
 
+    // Envia comprovante para impressora do caixa
+    await this.sendReceiptToPrint(
+      data.restaurantId,
+      session.table?.number ?? 0,
+      session.orders,
+      payment,
+    );
+
     return payment;
+  }
+
+  private async sendReceiptToPrint(
+    restaurantId: string,
+    tableNumber: number,
+    orders: Prisma.OrderGetPayload<{ include: { items: { include: { menuItem: true } } } }>[],
+    payment: Prisma.PaymentGetPayload<{ include: { paymentItems: true; cashier: true; session: { include: { table: true } } } }>,
+  ) {
+    try {
+      const [printers, restaurant] = await Promise.all([
+        this.printersService.findAll(restaurantId),
+        this.prisma.restaurant.findUnique({ where: { id: restaurantId } }),
+      ]);
+      const caixaPrinter = printers.find((p) => p.location === 'CAIXA');
+      if (!caixaPrinter) return;
+
+      const items = orders.flatMap((order) =>
+        order.items.map((item) => ({
+          name: item.menuItem?.name ?? 'Item',
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      );
+
+      this.gateway.notifyPrintComanda(restaurantId, 'caixa', {
+        printer: {
+          id: caixaPrinter.id,
+          name: caixaPrinter.name,
+          ip: caixaPrinter.ip,
+          port: caixaPrinter.port,
+        },
+        restaurantName: restaurant?.name ?? 'ORDEX',
+        restaurantCnpj: restaurant?.cnpj ?? null,
+        restaurantAddress: this.composeAddress(restaurant),
+        restaurantPhone: restaurant?.phone ?? null,
+        tableNumber,
+        orderId: payment.id,
+        type: 'RECEIPT',
+        items,
+        subtotal: payment.totalAmount,
+        serviceCharge: payment.serviceCharge,
+        discount: payment.discount,
+        finalAmount: payment.finalAmount,
+        method: payment.method,
+        cashReceived: payment.cashReceived,
+        change: payment.change,
+        createdAt: payment.createdAt,
+      });
+    } catch (error) {
+      this.logger.error(`Falha ao enviar comprovante para impressão: ${error}`);
+    }
+  }
+
+  private composeAddress(restaurant: { street?: string | null; number?: string | null; neighborhood?: string | null; city?: string | null; state?: string | null; address?: string | null } | null): string | null {
+    if (!restaurant) return null;
+    const streetLine = [restaurant.street, restaurant.number].filter(Boolean).join(', ');
+    const cityLine = [restaurant.neighborhood, restaurant.city && restaurant.state
+      ? `${restaurant.city}/${restaurant.state}`
+      : restaurant.city || restaurant.state,
+    ].filter(Boolean).join(' - ');
+
+    if (!streetLine && !cityLine) {
+      return restaurant.address ?? null;
+    }
+
+    return [streetLine, cityLine].filter(Boolean).join(' - ');
   }
 
   async getSessionBill(sessionId: string) {
@@ -195,14 +276,19 @@ export class PaymentsService {
       0,
     );
 
-    const restaurant = await this.prisma.restaurant.findUnique({
-      where: { id: session.restaurantId },
-    });
+    const bill = session.bill;
+    const serviceCharge = bill?.serviceCharge ?? 0;
+    const finalAmount = bill?.total ?? subtotal + serviceCharge;
 
-    const serviceCharge = subtotal * ((restaurant?.serviceCharge ?? 10) / 100);
-    const finalAmount = subtotal + serviceCharge;
-
-    return { session, subtotal, serviceCharge, finalAmount, restaurant };
+    return {
+      session,
+      subtotal,
+      serviceCharge,
+      serviceChargeType: bill?.serviceChargeType ?? 'PERCENTAGE',
+      serviceChargeAccepted: bill?.serviceChargeAccepted ?? true,
+      customServiceChargeAmount: bill?.customServiceChargeAmount ?? null,
+      finalAmount,
+    };
   }
 
   async getPendingSessions(restaurantId: string) {

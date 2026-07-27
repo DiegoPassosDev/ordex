@@ -13,6 +13,15 @@ model Restaurant {
   id              String   @id @default(uuid())
   name            String
   logoUrl         String?
+  cnpj            String?
+  address         String?
+  phone           String?
+  zipCode         String?
+  street          String?
+  number          String?
+  neighborhood    String?
+  city            String?
+  state           String?
   serviceCharge   Float    @default(10)
   cancelWindowMin Int      @default(3)
   acceptWindowMin Int      @default(2)
@@ -25,6 +34,33 @@ model Restaurant {
   tableSessions TableSession[]
   suppliers   Supplier[]
   stockItems  StockItem[]
+  printers    Printer[]
+}
+
+// ─── IMPRESSORAS ────────────────────────────────────────────────────────────
+
+model Printer {
+  id           String         @id @default(uuid())
+  name         String
+  ip           String
+  port         Int            @default(9100)
+  location     String
+  active       Boolean        @default(true)
+  restaurantId String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  restaurant Restaurant     @relation(fields: [restaurantId], references: [id])
+  rules      PrinterRule[]
+}
+
+model PrinterRule {
+  id           String       @id @default(uuid())
+  printerId    String
+  categoryType CategoryType
+  printer      Printer      @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@unique([printerId, categoryType])
 }
 
 // ─── MESAS ───────────────────────────────────────────────────────────────────

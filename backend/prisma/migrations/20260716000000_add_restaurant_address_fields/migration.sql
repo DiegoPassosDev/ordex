@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Restaurant" ADD COLUMN "zipCode" TEXT,
+ADD COLUMN "street" TEXT,
+ADD COLUMN "number" TEXT,
+ADD COLUMN "neighborhood" TEXT,
+ADD COLUMN "city" TEXT,
+ADD COLUMN "state" TEXT;

@@ -37,20 +37,18 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     const token = client.handshake.auth?.token;
-    if (typeof token !== 'string') {
-      client.disconnect(true);
-      return;
-    }
-
-    try {
-      const user = this.jwt.verify<SocketUser>(token);
-      client.data.user = user;
-      if (user.sub) {
-        void client.join(`guest_${user.sub}`);
+    if (typeof token === 'string') {
+      try {
+        const user = this.jwt.verify<SocketUser>(token);
+        client.data.user = user;
+        if (user.sub) {
+          void client.join(`guest_${user.sub}`);
+        }
+      } catch {
+        // token inválido — ignora, pode ser device anônimo
       }
-    } catch {
-      client.disconnect(true);
     }
+    // sem token também permite conexão (device page)
   }
 
   handleDisconnect(client: Socket) {
@@ -193,6 +191,42 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server
       .to(`session_${sessionId}`)
       .emit('session_closed_by_manager', { tableNumber: data.tableNumber });
+  }
+
+  // Dispositivo de impressão entra na sala
+  @SubscribeMessage('join_device')
+  handleJoinDevice(
+    @MessageBody() data: { restaurantId: string; location: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const user = client.data.user as SocketUser | undefined;
+    const allowedLocations = ['cozinha', 'bar', 'caixa'];
+
+    if (!data?.restaurantId || !data?.location) {
+      client.emit('join_device_error', { message: 'restaurantId e location são obrigatórios.' });
+      return;
+    }
+
+    const location = data.location.toLowerCase();
+    if (!allowedLocations.includes(location)) {
+      client.emit('join_device_error', { message: 'Localização inválida.' });
+      return;
+    }
+
+    if (user?.restaurantId && user.restaurantId !== data.restaurantId) {
+      client.emit('join_device_error', { message: 'Acesso negado a este restaurante.' });
+      return;
+    }
+
+    void client.join(`device_${data.restaurantId}_${location}`);
+    client.emit('join_device_success', { room: `device_${data.restaurantId}_${location}` });
+  }
+
+  // Notifica dispositivos de impressão
+  notifyPrintComanda(restaurantId: string, location: string, data: unknown) {
+    this.server
+      .to(`device_${restaurantId}_${location}`)
+      .emit('print_comanda', data);
   }
 
   // ── Garçons ativos (online) ───────────────────────────────────────────────

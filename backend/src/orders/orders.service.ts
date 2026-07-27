@@ -7,22 +7,27 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { UpdateItemStatusDto } from './dto/update-item-status.dto';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, Prisma } from '@prisma/client';
 import { OrdersGateway } from '../gateway/orders.gateway';
 import { StockService } from 'src/stock/stock.service';
+import { PrintersService } from '../printers/printers.service';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private prisma: PrismaService,
     private gateway: OrdersGateway,
     private stockService: StockService,
+    private printersService: PrintersService,
   ) {}
 
   async create(dto: CreateOrderDto) {
     const session = await this.prisma.tableSession.findUnique({
       where: { id: dto.sessionId },
-      include: { restaurant: true, guests: true },
+      include: { restaurant: true, guests: true, table: true },
     });
     if (!session) throw new NotFoundException('Sessão de mesa não encontrada.');
     if (session.status === 'CLOSED')
@@ -100,6 +105,13 @@ export class OrdersService {
 
     // Notifica cozinha, bar e gestor em tempo real
     this.gateway.notifyNewOrder(session.restaurantId, order, dto.sessionId);
+
+    // Envia comanda para impressoras vinculadas
+    await this.sendToPrinters(
+      session.restaurantId,
+      session.table?.number ?? 0,
+      order,
+    );
 
     return order;
   }
@@ -272,6 +284,41 @@ export class OrdersService {
     return finalOrder;
   }
 
+  async deliverPendingOrders(sessionId: string, restaurantId: string) {
+    const pendingOrders = await this.prisma.order.findMany({
+      where: {
+        sessionId,
+        status: { notIn: [OrderStatus.DELIVERED, OrderStatus.CANCELLED] },
+      },
+      include: {
+        items: { include: { menuItem: { include: { category: true } } } },
+        session: { include: { table: true } },
+      },
+    });
+
+    for (const order of pendingOrders) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: OrderStatus.DELIVERED,
+          statusHistory: { create: { status: OrderStatus.DELIVERED } },
+        },
+      });
+      await this.prisma.orderItem.updateMany({
+        where: {
+          orderId: order.id,
+          status: { notIn: [OrderStatus.CANCELLED] },
+        },
+        data: { status: OrderStatus.DELIVERED },
+      });
+
+      const finalOrder = await this.findOne(order.id);
+      this.gateway.notifyOrderStatusUpdate(restaurantId, sessionId, finalOrder);
+    }
+
+    return pendingOrders.length;
+  }
+
   private computeAggregateStatus(statuses: OrderStatus[]): OrderStatus {
     if (
       statuses.every(
@@ -285,5 +332,53 @@ export class OrdersService {
     if (statuses.some((s) => s === OrderStatus.PREPARING))
       return OrderStatus.PREPARING;
     return OrderStatus.WAITING;
+  }
+
+  private async sendToPrinters(
+    restaurantId: string,
+    tableNumber: number,
+    order: Prisma.OrderGetPayload<{
+      include: { items: { include: { menuItem: { include: { category: true } } } }; session: true };
+    }>,
+  ) {
+    try {
+      const printers = await this.printersService.findAll(restaurantId);
+      if (printers.length === 0) return;
+
+      const restaurant = await this.prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: { name: true },
+      });
+
+      for (const printer of printers) {
+        const matchingCategories = printer.rules.map((r) => r.categoryType);
+        const itemsToPrint = order.items.filter((item) =>
+          matchingCategories.includes(item.menuItem?.category?.type),
+        );
+        if (itemsToPrint.length === 0) continue;
+
+        const location = printer.location.toLowerCase();
+        this.gateway.notifyPrintComanda(restaurantId, location, {
+          printer: {
+            id: printer.id,
+            name: printer.name,
+            ip: printer.ip,
+            port: printer.port,
+          },
+          restaurantName: restaurant?.name ?? 'ORDEX',
+          tableNumber,
+          orderId: order.id,
+          items: itemsToPrint.map((item) => ({
+            name: item.menuItem.name,
+            quantity: item.quantity,
+            notes: item.notes,
+            category: item.menuItem.category?.name,
+          })),
+          createdAt: order.createdAt,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Falha ao enviar comanda para impressoras: ${error}`);
+    }
   }
 }
