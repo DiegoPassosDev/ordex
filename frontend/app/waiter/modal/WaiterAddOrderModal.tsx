@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Minus, ShoppingCart, Loader2, X } from "lucide-react";
 import { menuService } from "@/services/menu.service";
 import { ordersService } from "@/services/orders.service";
@@ -11,6 +11,7 @@ import type { Category, MenuItem } from "@/types";
 interface CartItem {
   menuItem: MenuItem;
   quantity: number;
+  notes?: string;
 }
 
 interface WaiterAddOrderModalProps {
@@ -30,11 +31,7 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  useEffect(() => {
-    loadMenu();
-  }, []);
-
-  async function loadMenu() {
+  const loadMenu = useCallback(async () => {
     try {
       const data = await menuService.getCategoriesByRestaurant(restaurantId);
       setCategories(data);
@@ -43,7 +40,11 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
     } finally {
       setLoading(false);
     }
-  }
+  }, [restaurantId]);
+
+  useEffect(() => {
+    loadMenu();
+  }, [loadMenu]);
 
   function getQuantity(itemId: string): number {
     return cart.find((c) => c.menuItem.id === itemId)?.quantity || 0;
@@ -77,6 +78,14 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
     });
   }
 
+  function updateNotes(itemId: string, notes: string) {
+    setCart((prev) =>
+      prev.map((c) =>
+        c.menuItem.id === itemId ? { ...c, notes: notes || undefined } : c,
+      ),
+    );
+  }
+
   const totalItems = cart.reduce((acc, c) => acc + c.quantity, 0);
   const totalPrice = cart.reduce(
     (acc, c) => acc + c.menuItem.price * c.quantity,
@@ -103,6 +112,7 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
       const items = cart.map((c) => ({
         menuItemId: c.menuItem.id,
         quantity: c.quantity,
+        notes: c.notes || undefined,
       }));
       await ordersService.create(sessionId, guestId || "", items);
       toast.success("Pedido adicionado!");
@@ -146,19 +156,26 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
                 {cart.map((c) => (
                   <div
                     key={c.menuItem.id}
-                    className="flex items-center justify-between bg-gray-700/50 rounded-2xl px-4 py-3"
+                    className="bg-gray-700/50 rounded-2xl px-4 py-3"
                   >
-                    <div className="flex-1 min-w-0 mr-3">
-                      <p className="text-sm font-medium text-white truncate">
-                        {c.menuItem.name}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        R$ {(c.menuItem.price * c.quantity).toFixed(2)}
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0 mr-3">
+                        <p className="text-sm font-medium text-white truncate">
+                          {c.menuItem.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          R$ {(c.menuItem.price * c.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                      <span className="w-7 h-7 rounded-md bg-gray-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {c.quantity}
+                      </span>
                     </div>
-                    <span className="w-7 h-7 rounded-md bg-gray-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {c.quantity}
-                    </span>
+                    {c.notes && (
+                      <p className="text-xs text-orange-300 italic mt-1.5">
+                        Obs: {c.notes}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -236,49 +253,60 @@ function Inner({ sessionId, guestId, restaurantId, onSuccess }: WaiterAddOrderMo
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between bg-gray-700/50 rounded-2xl px-4 py-3"
+                      className="bg-gray-700/50 rounded-2xl px-4 py-3"
                     >
-                      <div className="flex-1 min-w-0 mr-3">
-                        <p className="text-sm font-medium text-white truncate">
-                          {item.name}
-                        </p>
-                        <p className="text-xs text-orange-400 font-medium">
-                          R$ {item.price.toFixed(2)}
-                        </p>
-                        {item.description && (
-                          <p className="text-xs text-gray-500 truncate mt-0.5">
-                            {item.description}
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="text-sm font-medium text-white truncate">
+                            {item.name}
                           </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {qty > 0 ? (
-                          <>
-                            <button
-                              onClick={() => removeFromCart(item.id)}
-                              className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-white hover:bg-gray-500 transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="w-6 text-center text-sm font-bold text-white">
-                              {qty}
-                            </span>
+                          <p className="text-xs text-orange-400 font-medium">
+                            R$ {item.price.toFixed(2)}
+                          </p>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 truncate mt-0.5">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {qty > 0 ? (
+                            <>
+                              <button
+                                onClick={() => removeFromCart(item.id)}
+                                className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-white hover:bg-gray-500 transition-colors"
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="w-6 text-center text-sm font-bold text-white">
+                                {qty}
+                              </span>
+                              <button
+                                onClick={() => addToCart(item)}
+                                className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
                             <button
                               onClick={() => addToCart(item)}
-                              className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-white hover:bg-orange-600 transition-colors"
+                              className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 hover:bg-orange-500/20 hover:brightness-110 transition-all"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-4 h-4" />
                             </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => addToCart(item)}
-                            className="w-9 h-9 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 hover:bg-orange-500/20 hover:brightness-110 transition-all"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
+                      {qty > 0 && (
+                        <input
+                          type="text"
+                          placeholder="Observação (ex: sem cebola)"
+                          value={cart.find((c) => c.menuItem.id === item.id)?.notes || ""}
+                          onChange={(e) => updateNotes(item.id, e.target.value)}
+                          className="w-full mt-2 px-3 py-1.5 rounded-xl bg-gray-600 border border-gray-500 text-white text-xs placeholder:text-gray-400 focus:outline-none focus:border-orange-500"
+                        />
+                      )}
                     </div>
                   );
                 })}

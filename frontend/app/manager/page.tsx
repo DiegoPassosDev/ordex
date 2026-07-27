@@ -4,7 +4,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ItemTimer } from "@/components/ui/ItemTimer";
-import { useAuthStore } from "@/store/auth.store";
 import {
   LayoutGrid,
   ClipboardList,
@@ -15,12 +14,11 @@ import {
   Settings,
   ChefHat,
   Package,
+  Printer as PrinterIcon,
   Loader2,
-  LogOut,
 } from "lucide-react";
-import { ORDER_STATUS_DOT, ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/types";
+import { ORDER_STATUS_DOT, ORDER_STATUS_LABEL } from "@/types";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
-import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { useManagerDashboard } from "./useManagerDashboard";
 import { SessionDetailModal } from "./modal/SessionDetailModal";
@@ -33,6 +31,7 @@ const navItems = [
   { href: "/manager/menu", icon: ChefHat, label: "Cardápio" },
   { href: "/manager/employees", icon: Users, label: "Equipe" },
   { href: "/manager/stock", icon: Package, label: "Estoque" },
+  { href: "/manager/printers", icon: PrinterIcon, label: "Impressoras" },
   { href: "/manager/reports", icon: TrendingUp, label: "Relatórios" },
   { href: "/manager/settings", icon: Settings, label: "Configurações" },
 ];
@@ -63,8 +62,6 @@ const tableStatusConfig = {
 
 export default function ManagerDashboard() {
   useRequireAuth("MANAGER");
-  const { clearAuth } = useAuthStore();
-  const router = useRouter();
   const {
     restaurantId,
     openSessions,

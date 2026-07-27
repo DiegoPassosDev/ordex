@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +14,7 @@ import {
   Settings,
   ChefHat,
   Package,
+  Printer as PrinterIcon,
   Plus,
   QrCode,
   Loader2,
@@ -30,17 +32,10 @@ const navItems = [
   { href: "/manager/menu", icon: ChefHat, label: "Cardápio" },
   { href: "/manager/employees", icon: Users, label: "Equipe" },
   { href: "/manager/stock", icon: Package, label: "Estoque" },
+  { href: "/manager/printers", icon: PrinterIcon, label: "Impressoras" },
   { href: "/manager/reports", icon: TrendingUp, label: "Relatórios" },
   { href: "/manager/settings", icon: Settings, label: "Configurações" },
 ];
-
-interface Table {
-  id: string;
-  number: number;
-  qrCode: string;
-  restaurantId: string;
-  createdAt: string;
-}
 
 export default function TablesPage() {
   const {
@@ -56,7 +51,6 @@ export default function TablesPage() {
     setShowQrModal,
     selectedTableId,
     qrCodeImage,
-    qrCanvasRef,
     restaurantId,
     handleAddTable,
     handleDeleteTable,
@@ -321,9 +315,12 @@ export default function TablesPage() {
 
             <div className="flex items-center justify-center bg-white p-4 rounded-xl mb-5">
               {qrCodeImage ? (
-                <img
+                <Image
                   src={qrCodeImage}
                   alt="QR Code"
+                  width={200}
+                  height={200}
+                  unoptimized
                   className="w-full h-auto"
                 />
               ) : (

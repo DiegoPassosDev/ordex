@@ -6,8 +6,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { LogoutConfirmModal } from "@/components/ui/LogoutConfirmModal";
+import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { useNotificationContext } from "@/context/NotificationContext";
-import { RESTAURANT_ID_FALLBACK } from "@/constants";
 
 
 interface HeaderProps {
@@ -20,23 +20,19 @@ interface HeaderProps {
 export function Header({
   title,
   subtitle,
-  restaurantId,
-  role = "MANAGER",
+  restaurantId: _restaurantId,
+  role: _role = "MANAGER",
 }: HeaderProps) {
   const { guest, employee, clearAuth } = useAuthStore();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const restId =
-    restaurantId ||
-    employee?.restaurantId ||
-    RESTAURANT_ID_FALLBACK;
 
   const {
     notifications,
     unreadCount,
     soundEnabled,
     toggleSound,
-    addNotification,
+    addNotification: _addNotification,
     markAllRead,
     markRead,
     clearAll,
@@ -67,7 +63,7 @@ export function Header({
         {subtitle && <p className="text-sm text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <NotificationBell
           notifications={notifications}
           unreadCount={unreadCount}
@@ -82,6 +78,8 @@ export function Header({
         <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
           <span className="text-white font-semibold text-sm">{initials}</span>
         </div>
+
+        <ThemeToggle className="w-10 h-10 rounded-xl bg-gray-800 border border-gray-600 shadow-sm flex items-center justify-center text-gray-400 hover:bg-gray-700 hover:text-white transition-all" />
 
         <button
           onClick={() => setShowLogoutModal(true)}

@@ -11,6 +11,7 @@ import {
   Settings,
   ChefHat,
   Package,
+  Printer as PrinterIcon,
   Loader2,
 } from "lucide-react";
 import { CustomToaster } from "@/components/ui/Toast";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/manager/menu", icon: ChefHat, label: "Cardápio" },
   { href: "/manager/employees", icon: Users, label: "Equipe" },
   { href: "/manager/stock", icon: Package, label: "Estoque" },
+  { href: "/manager/printers", icon: PrinterIcon, label: "Impressoras" },
   { href: "/manager/reports", icon: TrendingUp, label: "Relatórios" },
   { href: "/manager/settings", icon: Settings, label: "Configurações" },
 ];

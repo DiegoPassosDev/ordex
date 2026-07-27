@@ -18,6 +18,15 @@ export interface Restaurant {
   id: string;
   name: string;
   logoUrl?: string;
+  cnpj?: string;
+  address?: string;
+  phone?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
   serviceCharge: number;
   cancelWindowMin: number;
   acceptWindowMin: number;
@@ -136,3 +145,22 @@ export const ORDER_STATUS_DOT: Record<OrderStatus, string> = {
   DELIVERED: "bg-gray-400",
   CANCELLED: "bg-red-500",
 };
+
+export interface PrinterRule {
+  id: string;
+  printerId: string;
+  categoryType: CategoryType;
+}
+
+export interface Printer {
+  id: string;
+  name: string;
+  ip: string;
+  port: number;
+  location: string;
+  active: boolean;
+  restaurantId: string;
+  createdAt: string;
+  updatedAt: string;
+  rules: PrinterRule[];
+}

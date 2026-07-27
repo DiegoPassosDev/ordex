@@ -7,6 +7,7 @@ import {
   Settings,
   ChefHat,
   Package,
+  Printer,
 } from "lucide-react";
 
 export const managerNavItems = [
@@ -16,6 +17,7 @@ export const managerNavItems = [
   { href: "/manager/menu", icon: ChefHat, label: "Cardápio" },
   { href: "/manager/employees", icon: Users, label: "Equipe" },
   { href: "/manager/stock", icon: Package, label: "Estoque" },
+  { href: "/manager/printers", icon: Printer, label: "Impressoras" },
   { href: "/manager/reports", icon: TrendingUp, label: "Relatórios" },
   { href: "/manager/settings", icon: Settings, label: "Configurações" },
 ];

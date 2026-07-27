@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/api"];
+const PUBLIC_ROUTES = ["/login", "/api", "/device"];
 
 const ROLE_ROUTES: Record<string, string[]> = {
   MANAGER: ["/manager"],
@@ -12,6 +12,11 @@ const ROLE_ROUTES: Record<string, string[]> = {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Arquivos estáticos — deixa passar
+  if (pathname.includes(".")) {
+    return NextResponse.next();
+  }
 
   // Rotas públicas — deixa passar
   if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
