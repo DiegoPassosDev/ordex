@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   DollarSign,
   CreditCard,
@@ -86,7 +87,7 @@ export default function CashierPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
-              <DollarSign className="w-4 h-4 text-white" />
+              <Image src="/icone-ordex.svg" alt="Ordex" width={28} height={28} className="w-7 h-7 brightness-0 invert" />
             </div>
             <div>
               <p className="font-bold text-white text-sm">Caixa — Ordex</p>

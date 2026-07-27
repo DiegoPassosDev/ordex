@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import { LogIn, ChefHat, UserPlus } from "lucide-react";
+import Image from "next/image";
+import { LogIn, UserPlus } from "lucide-react";
 import { CustomToaster } from "@/components/ui/Toast";
 import { ThemeToggle } from "@/components/theme/ThemeProvider";
 import { useLoginCustomer } from "./useLoginCustomer";
@@ -39,7 +40,7 @@ function LoginCustomerInner() {
         {/* Logo */}
         <div className="flex items-center gap-2 mb-5">
           <div className="w-9 h-9 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-            <ChefHat className="w-5 h-5 text-orange-400" />
+            <Image src="/icone-ordex.svg" alt="Ordex" width={24} height={24} className="w-6 h-6" />
           </div>
           <span className="text-white text-xl font-bold">Ordex</span>
         </div>
