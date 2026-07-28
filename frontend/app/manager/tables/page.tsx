@@ -95,15 +95,6 @@ export default function TablesPage() {
             subtitle="Gerencie as mesas do restaurante"
             restaurantId={restaurantId}
           />
-          <div className="flex justify-end mb-6">
-            <Button
-              icon={Plus}
-              onClick={() => setShowAddModal(true)}
-              className="w-full sm:w-auto"
-            >
-              Nova Mesa
-            </Button>
-          </div>
 
           {loading && (
             <div className="flex items-center justify-center py-20">
@@ -139,6 +130,15 @@ export default function TablesPage() {
                     Mesas livres
                   </p>
                 </div>
+              </div>
+              <div className="flex justify-end mb-6">
+                <Button
+                  icon={Plus}
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full sm:w-auto"
+                >
+                  Nova Mesa
+                </Button>
               </div>
 
               {/* Grid de mesas */}
@@ -360,7 +360,10 @@ export default function TablesPage() {
 
                   const img = doc.createElement("img");
                   img.src = qrCodeImage;
-                  img.onload = () => { win.print(); win.close(); };
+                  img.onload = () => {
+                    win.print();
+                    win.close();
+                  };
                   container.appendChild(img);
 
                   const hint = doc.createElement("div");

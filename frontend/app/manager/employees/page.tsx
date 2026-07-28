@@ -66,15 +66,6 @@ export default function EmployeesPage() {
             subtitle="Gerencie a equipe do restaurante"
             restaurantId={p.restaurantId}
           />
-          <div className="flex justify-end gap-3 mb-6">
-            <Button
-              icon={Plus}
-              onClick={p.openAddModal}
-              className="w-full sm:w-auto"
-            >
-              Novo Funcionário
-            </Button>
-          </div>
 
           <div className="grid grid-cols-5 gap-2 mb-6 sm:mb-8">
             {Object.entries(p.byRole).map(([role, count]) => (
@@ -97,6 +88,16 @@ export default function EmployeesPage() {
               <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             </div>
           )}
+
+          <div className="flex justify-end gap-3 mb-6">
+            <Button
+              icon={Plus}
+              onClick={p.openAddModal}
+              className="w-full sm:w-auto"
+            >
+              Novo Funcionário
+            </Button>
+          </div>
 
           {!p.loading && (
             <Card>

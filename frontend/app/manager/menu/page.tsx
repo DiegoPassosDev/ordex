@@ -81,19 +81,6 @@ export default function MenuPage() {
             subtitle="Gerencie o cardápio do restaurante"
             restaurantId={restaurantId}
           />
-          <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
-            <Button icon={Plus} onClick={() => setShowItemModal(true)}>
-              Novo Item
-            </Button>
-            <Button
-              variant="secondary"
-              icon={Plus}
-              onClick={() => setShowCatModal(true)}
-              className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-            >
-              Nova Categoria
-            </Button>
-          </div>
 
           {/* Resumo */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -134,6 +121,19 @@ export default function MenuPage() {
               <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
             </div>
           )}
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mb-6">
+            <Button icon={Plus} onClick={() => setShowItemModal(true)}>
+              Novo Item
+            </Button>
+            <Button
+              variant="secondary"
+              icon={Plus}
+              onClick={() => setShowCatModal(true)}
+              className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+            >
+              Nova Categoria
+            </Button>
+          </div>
 
           {/* Categorias e Itens */}
           {!loading && filteredCategories.length === 0 && !loading && (
